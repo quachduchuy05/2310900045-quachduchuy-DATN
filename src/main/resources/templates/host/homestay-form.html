@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Homestay')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<main class="container">
+    <div class="card form-medium">
+        <h2 th:text="${homestayId == null} ? 'Thêm homestay' : 'Sửa homestay'">Homestay</h2>
+
+        <form th:object="${form}" method="post"
+              th:action="${homestayId == null} ? @{/host/homestays/new} : @{/host/homestays/{id}/edit(id=${homestayId})}">
+            <label>Tên homestay
+                <input type="text" th:field="*{name}">
+                <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+            </label>
+            <div class="row">
+                <label>Thành phố
+                    <input type="text" th:field="*{city}" placeholder="Đà Lạt">
+                    <span class="field-error" th:if="${#fields.hasErrors('city')}" th:errors="*{city}"></span>
+                </label>
+                <label>Địa chỉ
+                    <input type="text" th:field="*{address}">
+                    <span class="field-error" th:if="${#fields.hasErrors('address')}" th:errors="*{address}"></span>
+                </label>
+            </div>
+            <label>Mô tả
+                <textarea th:field="*{description}" rows="4"></textarea>
+            </label>
+            <label>Link ảnh đại diện
+                <input type="url" th:field="*{imageUrl}" placeholder="https://...">
+            </label>
+            <label>Tiện ích (phân cách bằng dấu phẩy)
+                <input type="text" th:field="*{amenities}" placeholder="Wifi, Bữa sáng, Bể bơi">
+            </label>
+            <button type="submit" class="btn">Lưu</button>
+            <a class="btn btn-outline" th:href="@{/host}">Hủy</a>
+        </form>
+    </div>
+</main>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

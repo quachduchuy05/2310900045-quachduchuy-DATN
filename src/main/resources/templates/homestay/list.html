@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Tìm homestay')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<main class="container">
+    <div th:replace="~{fragments/layout :: flash}"></div>
+    <form th:action="@{/homestays}" method="get" style="display:flex;gap:8px;margin-bottom:20px">
+        <input type="text" name="keyword" th:value="${keyword}" placeholder="Thành phố hoặc tên homestay...">
+        <button type="submit" class="btn">Tìm</button>
+    </form>
+
+    <h2 th:if="${keyword != null and !#strings.isEmpty(keyword)}">
+        Kết quả cho "<span th:text="${keyword}"></span>" (<span th:text="${#lists.size(homestays)}">0</span>)
+    </h2>
+    <h2 th:unless="${keyword != null and !#strings.isEmpty(keyword)}">Tất cả homestay</h2>
+
+    <p class="muted" th:if="${#lists.isEmpty(homestays)}">Không tìm thấy homestay phù hợp.</p>
+    <div class="grid">
+        <th:block th:each="h : ${homestays}">
+            <a th:replace="~{fragments/layout :: homestayCard(${h})}"></a>
+        </th:block>
+    </div>
+</main>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Chi tiết đơn')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<main class="container">
+    <div th:replace="~{fragments/layout :: flash}"></div>
+    <a th:href="@{/bookings}">← Danh sách đơn</a>
+
+    <div class="card form-medium" style="margin-top:12px">
+        <h2 style="margin-top:0">Đơn #<span th:text="${booking.id}">1</span>
+            <span th:replace="~{fragments/layout :: bookingStatus(${booking.status})}"></span>
+        </h2>
+
+        <p><b th:text="${booking.room.homestay.name}">Homestay</b> - <span th:text="${booking.room.name}">Phòng</span><br>
+            <span class="muted" th:text="${booking.room.homestay.address}">Địa chỉ</span></p>
+        <table>
+            <tr><th>Nhận phòng</th><td th:text="${#temporals.format(booking.checkIn, 'dd/MM/yyyy')}"></td></tr>
+            <tr><th>Trả phòng</th><td th:text="${#temporals.format(booking.checkOut, 'dd/MM/yyyy')}"></td></tr>
+            <tr><th>Số đêm</th><td th:text="${booking.nights}"></td></tr>
+            <tr><th>Số khách</th><td th:text="${booking.guests}"></td></tr>
+            <tr th:if="${!#strings.isEmpty(booking.note)}"><th>Ghi chú</th><td th:text="${booking.note}"></td></tr>
+            <tr><th>Tổng tiền</th>
+                <td class="price"><span th:text="${#numbers.formatDecimal(booking.totalPrice, 0, 'POINT', 0, 'COMMA')}">0</span>đ</td></tr>
+        </table>
+
+        <div th:if="${booking.status.name() == 'PENDING'}" style="margin-top:16px">
+            <div class="alert alert-info">
+                Vui lòng thanh toán trước
+                <b th:text="${#temporals.format(deadline, 'HH:mm dd/MM/yyyy')}">hạn</b>,
+                nếu không đơn sẽ tự hủy và nhả phòng.
+            </div>
+            <form th:action="@{/payment/create/{id}(id=${booking.id})}" method="post" style="display:inline">
+                <button type="submit" class="btn btn-ok">💳 Thanh toán VNPay</button>
+            </form>
+            <form th:action="@{/bookings/{id}/cancel(id=${booking.id})}" method="post" style="display:inline"
+                  onsubmit="return confirm('Bạn chắc chắn muốn hủy đơn này?')">
+                <button type="submit" class="btn btn-danger">Hủy đơn</button>
+            </form>
+        </div>
+    </div>
+</main>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

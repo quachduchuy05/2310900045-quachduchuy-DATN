@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Phòng')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<main class="container">
+    <div class="card form-medium">
+        <h2 th:text="${roomId == null} ? 'Thêm phòng' : 'Sửa phòng'">Phòng</h2>
+
+        <form th:object="${form}" method="post"
+              th:action="${roomId == null} ? @{/host/homestays/{id}/rooms/new(id=${homestayId})} : @{/host/rooms/{id}/edit(id=${roomId})}">
+            <label>Tên phòng
+                <input type="text" th:field="*{name}">
+                <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+            </label>
+            <div class="row">
+                <label>Giá / đêm (đ)
+                    <input type="number" th:field="*{pricePerNight}" step="1000">
+                    <span class="field-error" th:if="${#fields.hasErrors('pricePerNight')}" th:errors="*{pricePerNight}"></span>
+                </label>
+                <label>Sức chứa (người)
+                    <input type="number" th:field="*{capacity}" min="1">
+                    <span class="field-error" th:if="${#fields.hasErrors('capacity')}" th:errors="*{capacity}"></span>
+                </label>
+            </div>
+            <label>Mô tả
+                <textarea th:field="*{description}" rows="3"></textarea>
+            </label>
+            <label>Link ảnh
+                <input type="url" th:field="*{imageUrl}" placeholder="https://...">
+            </label>
+            <label class="check">
+                <input type="checkbox" th:field="*{available}"> Đang nhận khách
+            </label>
+            <button type="submit" class="btn">Lưu</button>
+            <a class="btn btn-outline" th:href="@{/host/homestays/{id}/rooms(id=${homestayId})}">Hủy</a>
+        </form>
+    </div>
+</main>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

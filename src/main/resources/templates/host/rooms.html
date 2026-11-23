@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Phòng')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<main class="container">
+    <div th:replace="~{fragments/layout :: flash}"></div>
+    <a th:href="@{/host}">← Quản lý nhà</a>
+
+    <div style="display:flex;justify-content:space-between;align-items:center">
+        <h2>Phòng của <span th:text="${homestay.name}">Homestay</span></h2>
+        <a class="btn" th:href="@{/host/homestays/{id}/rooms/new(id=${homestay.id})}">+ Thêm phòng</a>
+    </div>
+
+    <p class="muted" th:if="${#lists.isEmpty(rooms)}">Chưa có phòng nào. Hãy thêm phòng để khách có thể đặt.</p>
+    <div class="table-wrap" th:unless="${#lists.isEmpty(rooms)}">
+        <table>
+            <thead><tr><th>Tên phòng</th><th>Giá / đêm</th><th>Sức chứa</th><th>Trạng thái</th><th></th></tr></thead>
+            <tbody>
+            <tr th:each="r : ${rooms}">
+                <td th:text="${r.name}">Phòng</td>
+                <td><span th:text="${#numbers.formatDecimal(r.pricePerNight, 0, 'POINT', 0, 'COMMA')}"></span>đ</td>
+                <td th:text="${r.capacity}">2</td>
+                <td>
+                    <span class="badge badge-paid" th:if="${r.available}">Nhận khách</span>
+                    <span class="badge badge-cancelled" th:unless="${r.available}">Tạm ngưng</span>
+                </td>
+                <td>
+                    <a class="btn btn-sm btn-outline" th:href="@{/host/rooms/{id}/edit(id=${r.id})}">Sửa</a>
+                    <form th:action="@{/host/rooms/{id}/delete(id=${r.id})}" method="post"
+                          onsubmit="return confirm('Xóa phòng này?')">
+                        <button type="submit" class="btn btn-sm btn-danger">Xóa</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

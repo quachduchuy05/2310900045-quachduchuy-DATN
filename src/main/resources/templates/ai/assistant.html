@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Trợ lý AI')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<main class="container">
+    <h2>✨ Trợ lý du lịch AI</h2>
+    <div class="alert alert-info" th:unless="${aiReady}">
+        Chưa cấu hình <code>gemini.api-key</code> nên hệ thống sẽ dùng lịch trình mẫu thay cho Gemini.
+    </div>
+
+    <div class="card">
+        <form th:action="@{/ai/plan}" th:object="${form}" method="post">
+            <div class="row">
+                <label>Điểm đến
+                    <input type="text" th:field="*{destination}" list="cityList" placeholder="Đà Lạt, Hội An...">
+                    <datalist id="cityList"><option th:each="c : ${cities}" th:value="${c}"></option></datalist>
+                    <span class="field-error" th:if="${#fields.hasErrors('destination')}" th:errors="*{destination}"></span>
+                </label>
+                <label>Số ngày
+                    <input type="number" th:field="*{days}" min="1" max="14">
+                    <span class="field-error" th:if="${#fields.hasErrors('days')}" th:errors="*{days}"></span>
+                </label>
+                <label>Số người
+                    <input type="number" th:field="*{guests}" min="1">
+                    <span class="field-error" th:if="${#fields.hasErrors('guests')}" th:errors="*{guests}"></span>
+                </label>
+                <label>Ngân sách (đ)
+                    <input type="number" th:field="*{budget}" min="100000" step="50000">
+                    <span class="field-error" th:if="${#fields.hasErrors('budget')}" th:errors="*{budget}"></span>
+                </label>
+            </div>
+            <label>Sở thích
+                <input type="text" th:field="*{interests}" placeholder="ẩm thực, chụp ảnh, thiên nhiên...">
+            </label>
+            <button type="submit" class="btn">Lập lịch trình</button>
+        </form>
+    </div>
+
+    <div class="card" th:if="${suggestion != null}">
+        <h3 style="margin-top:0">Kết quả
+            <span class="badge badge-paid" th:if="${suggestion.fromAi()}">Gemini AI</span>
+            <span class="badge" th:unless="${suggestion.fromAi()}">Lịch trình mẫu</span>
+        </h3>
+        <pre class="md-src" hidden th:text="${suggestion.content()}"></pre>
+        <div class="md-out"></div>
+
+        <th:block th:if="${!#lists.isEmpty(suggestion.suggestedRooms())}">
+            <h3>Phòng phù hợp trên Staygo</h3>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Phòng</th><th>Homestay</th><th>Giá / đêm</th><th>Sức chứa</th><th></th></tr></thead>
+                    <tbody>
+                    <tr th:each="r : ${suggestion.suggestedRooms()}">
+                        <td th:text="${r.name}">Phòng</td>
+                        <td th:text="${r.homestay.name}">Homestay</td>
+                        <td class="price"><span th:text="${#numbers.formatDecimal(r.pricePerNight, 0, 'POINT', 0, 'COMMA')}">0</span>đ</td>
+                        <td th:text="${r.capacity}">2</td>
+                        <td><a class="btn btn-sm" th:href="@{/homestays/{id}(id=${r.homestay.id})}">Xem &amp; đặt</a></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </th:block>
+    </div>
+
+    <div class="card" th:if="${!#lists.isEmpty(history)}">
+        <h3 style="margin-top:0">Lịch sử gợi ý gần đây</h3>
+        <details class="history" th:each="p : ${history}">
+            <summary>
+                <span th:text="${p.destination}">Điểm đến</span> ·
+                <span th:text="${p.days} + ' ngày'"></span> ·
+                <span th:text="${#numbers.formatDecimal(p.budget, 0, 'POINT', 0, 'COMMA')} + 'đ'"></span>
+                <span class="muted" th:text="'(' + ${#temporals.format(p.createdAt, 'dd/MM/yyyy HH:mm')} + ')'"></span>
+            </summary>
+            <pre class="md-src" hidden th:text="${p.content}"></pre>
+            <div class="md-out"></div>
+        </details>
+    </div>
+</main>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<script th:src="@{/js/md.js}"></script>
+</body>
+</html>

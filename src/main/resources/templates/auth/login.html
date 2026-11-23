@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Đăng nhập')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<main class="container">
+    <div class="card form-narrow">
+        <h2>Đăng nhập</h2>
+        <div th:replace="~{fragments/layout :: flash}"></div>
+        <div class="alert alert-error" th:if="${param.error}">Email hoặc mật khẩu không đúng, hoặc tài khoản đã bị khóa.</div>
+
+        <form th:action="@{/login}" method="post">
+            <label>Email
+                <input type="email" name="email" required autofocus>
+            </label>
+            <label>Mật khẩu
+                <input type="password" name="password" required>
+            </label>
+            <button type="submit" class="btn" style="width:100%">Đăng nhập</button>
+        </form>
+        <p class="center muted">Chưa có tài khoản? <a th:href="@{/register}">Đăng ký</a></p>
+        <p class="center muted" style="font-size:.85rem">
+            Demo: admin@staygo.vn / host@staygo.vn / user@staygo.vn (mật khẩu 123456)
+        </p>
+    </div>
+</main>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

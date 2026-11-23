@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Đăng ký')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<main class="container">
+    <div class="card form-narrow">
+        <h2>Đăng ký tài khoản</h2>
+        <div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+
+        <form th:action="@{/register}" th:object="${form}" method="post">
+            <label>Họ và tên
+                <input type="text" th:field="*{fullName}">
+                <span class="field-error" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></span>
+            </label>
+            <label>Email
+                <input type="email" th:field="*{email}">
+                <span class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
+            </label>
+            <label>Số điện thoại
+                <input type="text" th:field="*{phone}">
+            </label>
+            <label>Mật khẩu
+                <input type="password" th:field="*{password}">
+                <span class="field-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></span>
+            </label>
+            <label>Nhập lại mật khẩu
+                <input type="password" th:field="*{confirmPassword}">
+            </label>
+            <label class="check">
+                <input type="checkbox" th:field="*{registerAsHost}">
+                Tôi muốn đăng ký làm chủ nhà (đăng homestay cho thuê)
+            </label>
+            <button type="submit" class="btn" style="width:100%">Đăng ký</button>
+        </form>
+        <p class="center muted">Đã có tài khoản? <a th:href="@{/login}">Đăng nhập</a></p>
+    </div>
+</main>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

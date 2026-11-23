@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Quản lý nhà')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<main class="container">
+    <div th:replace="~{fragments/layout :: flash}"></div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center">
+        <h2>Homestay của tôi</h2>
+        <a class="btn" th:href="@{/host/homestays/new}">+ Thêm homestay</a>
+    </div>
+
+    <p class="muted" th:if="${#lists.isEmpty(homestays)}">Bạn chưa có homestay nào.</p>
+    <div class="table-wrap" th:unless="${#lists.isEmpty(homestays)}">
+        <table>
+            <thead><tr><th>Tên</th><th>Thành phố</th><th>Số phòng</th><th>Trạng thái</th><th></th></tr></thead>
+            <tbody>
+            <tr th:each="h : ${homestays}">
+                <td><a th:href="@{/homestays/{id}(id=${h.id})}" th:text="${h.name}">Tên</a></td>
+                <td th:text="${h.city}">Thành phố</td>
+                <td th:text="${#lists.size(h.rooms)}">0</td>
+                <td>
+                    <span class="badge badge-paid" th:if="${h.active}">Đang hoạt động</span>
+                    <span class="badge badge-cancelled" th:unless="${h.active}">Bị ẩn</span>
+                </td>
+                <td>
+                    <a class="btn btn-sm btn-outline" th:href="@{/host/homestays/{id}/rooms(id=${h.id})}">Phòng</a>
+                    <a class="btn btn-sm btn-outline" th:href="@{/host/homestays/{id}/edit(id=${h.id})}">Sửa</a>
+                    <form th:action="@{/host/homestays/{id}/delete(id=${h.id})}" method="post"
+                          onsubmit="return confirm('Xóa homestay này cùng toàn bộ phòng?')">
+                        <button type="submit" class="btn btn-sm btn-danger">Xóa</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2>Đơn đặt phòng</h2>
+    <p class="muted" th:if="${#lists.isEmpty(bookings)}">Chưa có đơn nào.</p>
+    <div class="table-wrap" th:unless="${#lists.isEmpty(bookings)}">
+        <table>
+            <thead><tr><th>Mã</th><th>Khách</th><th>Phòng</th><th>Ngày ở</th><th>Tiền</th><th>Trạng thái</th><th></th></tr></thead>
+            <tbody>
+            <tr th:each="b : ${bookings}">
+                <td th:text="'#' + ${b.id}">#1</td>
+                <td><span th:text="${b.user.fullName}">Khách</span><br><span class="muted" th:text="${b.user.phone}"></span></td>
+                <td><span th:text="${b.room.homestay.name}"></span><br><span class="muted" th:text="${b.room.name}"></span></td>
+                <td>
+                    <span th:text="${#temporals.format(b.checkIn, 'dd/MM/yyyy')}"></span> →
+                    <span th:text="${#temporals.format(b.checkOut, 'dd/MM/yyyy')}"></span>
+                </td>
+                <td><span th:text="${#numbers.formatDecimal(b.totalPrice, 0, 'POINT', 0, 'COMMA')}"></span>đ</td>
+                <td>
+                    <span th:replace="~{fragments/layout :: bookingStatus(${b.status})}"></span>
+                    <div class="muted" style="font-size:.8rem" th:if="${!#strings.isEmpty(b.note)}" th:text="${b.note}"></div>
+                </td>
+                <td>
+                    <form th:if="${b.status.name() == 'PAID'}" th:action="@{/host/bookings/{id}/status(id=${b.id})}" method="post">
+                        <input type="hidden" name="status" value="COMPLETED">
+                        <button type="submit" class="btn btn-sm btn-ok">Khách đã ở xong</button>
+                    </form>
+                    <form th:if="${b.status.name() == 'PENDING' or b.status.name() == 'PAID'}"
+                          th:action="@{/host/bookings/{id}/status(id=${b.id})}" method="post"
+                          onsubmit="return confirm('Hủy đơn này?')">
+                        <input type="hidden" name="status" value="CANCELLED">
+                        <button type="submit" class="btn btn-sm btn-danger">Hủy</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

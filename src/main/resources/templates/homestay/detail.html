@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head(${homestay.name})}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<main class="container">
+    <div th:replace="~{fragments/layout :: flash}"></div>
+
+    <img class="detail-img"
+         th:src="${#strings.isEmpty(homestay.imageUrl)} ? @{/images/placeholder.svg} : ${homestay.imageUrl}"
+         th:alt="${homestay.name}">
+    <h1 th:text="${homestay.name}">Tên homestay</h1>
+    <p class="muted">📍 <span th:text="${homestay.address}">Địa chỉ</span> · <span th:text="${homestay.city}">Thành phố</span></p>
+    <p th:text="${homestay.description}">Mô tả</p>
+    <div class="tags" th:if="${!#strings.isEmpty(homestay.amenities)}">
+        <span th:each="a : ${#strings.listSplit(homestay.amenities, ',')}" th:text="${#strings.trim(a)}">Wifi</span>
+    </div>
+
+    <h2>Các phòng</h2>
+    <p class="muted" th:if="${#lists.isEmpty(rooms)}">Homestay chưa có phòng nào.</p>
+
+    <div class="card room" th:each="room : ${rooms}">
+        <img th:src="${#strings.isEmpty(room.imageUrl)} ? @{/images/placeholder.svg} : ${room.imageUrl}" th:alt="${room.name}">
+        <div>
+            <h3 th:text="${room.name}" style="margin-top:0">Tên phòng</h3>
+            <p class="muted" th:text="${room.description}">Mô tả phòng</p>
+            <p>
+                <span class="price"><span th:text="${#numbers.formatDecimal(room.pricePerNight, 0, 'POINT', 0, 'COMMA')}">0</span>đ / đêm</span>
+                · tối đa <b th:text="${room.capacity}">2</b> khách
+            </p>
+
+            <div th:with="ranges=${bookedRanges.get(room.id)}" th:if="${ranges != null and !#lists.isEmpty(ranges)}">
+                <div class="muted" style="font-size:.85rem">Đã kín các ngày:</div>
+                <ul class="booked">
+                    <li th:each="b : ${ranges}">
+                        <span th:text="${#temporals.format(b.checkIn, 'dd/MM/yyyy')}"></span> →
+                        <span th:text="${#temporals.format(b.checkOut, 'dd/MM/yyyy')}"></span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="alert alert-info" th:unless="${room.available}">Phòng tạm ngưng nhận khách.</div>
+
+            <form th:if="${room.available}" th:action="@{/bookings}" method="post" sec:authorize="isAuthenticated()">
+                <input type="hidden" name="roomId" th:value="${room.id}">
+                <div class="row">
+                    <label>Nhận phòng
+                        <input type="date" name="checkIn" th:min="${today}" required>
+                    </label>
+                    <label>Trả phòng
+                        <input type="date" name="checkOut" th:min="${today}" required>
+                    </label>
+                    <label>Số khách
+                        <input type="number" name="guests" value="1" min="1" th:max="${room.capacity}" required>
+                    </label>
+                </div>
+                <label>Ghi chú
+                    <input type="text" name="note" maxlength="300" placeholder="Yêu cầu thêm (không bắt buộc)">
+                </label>
+                <button type="submit" class="btn">Đặt phòng</button>
+            </form>
+            <p th:if="${room.available}" sec:authorize="isAnonymous()">
+                <a class="btn" th:href="@{/login}">Đăng nhập để đặt phòng</a>
+            </p>
+        </div>
+    </div>
+</main>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

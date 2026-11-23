@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<!-- Các mảnh giao diện dùng chung: head, navbar, flash, footer, thẻ homestay, nhãn trạng thái -->
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${title} + ' | Staygo'">Staygo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<nav class="navbar" th:fragment="navbar">
+    <div class="inner">
+        <a class="brand" th:href="@{/}">🏡 Staygo</a>
+        <a th:href="@{/homestays}">Tìm homestay</a>
+        <a th:href="@{/ai}">Trợ lý AI</a>
+        <th:block sec:authorize="isAuthenticated()">
+            <a th:href="@{/bookings}">Đơn của tôi</a>
+            <a sec:authorize="hasAnyRole('HOST','ADMIN')" th:href="@{/host}">Quản lý nhà</a>
+            <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin}">Quản trị</a>
+            <span>👤 <span sec:authentication="name">user</span></span>
+            <form th:action="@{/logout}" method="post">
+                <button type="submit" class="link-btn">Đăng xuất</button>
+            </form>
+        </th:block>
+        <th:block sec:authorize="isAnonymous()">
+            <a th:href="@{/login}">Đăng nhập</a>
+            <a th:href="@{/register}">Đăng ký</a>
+        </th:block>
+    </div>
+</nav>
+
+<div th:fragment="flash">
+    <div class="alert alert-success" th:if="${success}" th:text="${success}"></div>
+    <div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+</div>
+
+<footer class="footer" th:fragment="footer">
+    © Staygo - Website đặt phòng homestay tích hợp AI &amp; thanh toán VNPay
+</footer>
+
+<!-- Thẻ hiển thị một homestay trong danh sách -->
+<a class="hcard" th:fragment="homestayCard(h)" th:href="@{/homestays/{id}(id=${h.id})}">
+    <div class="thumb">
+        <img th:src="${#strings.isEmpty(h.imageUrl)} ? @{/images/placeholder.svg} : ${h.imageUrl}" th:alt="${h.name}">
+    </div>
+    <div class="body">
+        <h3 th:text="${h.name}">Tên homestay</h3>
+        <div class="muted">📍 <span th:text="${h.city}">Thành phố</span></div>
+        <div class="price" th:if="${h.minPrice != null}">
+            Từ <span th:text="${#numbers.formatDecimal(h.minPrice, 0, 'POINT', 0, 'COMMA')}">0</span>đ / đêm
+        </div>
+        <div class="muted" th:if="${h.minPrice == null}">Chưa có phòng</div>
+    </div>
+</a>
+
+<!-- Nhãn trạng thái đơn đặt phòng -->
+<span th:fragment="bookingStatus(s)" class="badge"
+      th:classappend="'badge-' + ${#strings.toLowerCase(s.name())}"
+      th:text="${s.name() == 'PENDING'} ? 'Chờ thanh toán' : (${s.name() == 'PAID'} ? 'Đã thanh toán' : (${s.name() == 'CANCELLED'} ? 'Đã hủy' : 'Hoàn tất'))">Trạng thái</span>
+
+</body>
+</html>

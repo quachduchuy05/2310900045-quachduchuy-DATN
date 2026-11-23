@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Trang chủ')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<section class="hero">
+    <h1>Tìm homestay cho chuyến đi của bạn</h1>
+    <p>Đặt phòng nhanh, thanh toán VNPay, lịch trình do AI gợi ý.</p>
+    <form th:action="@{/homestays}" method="get">
+        <input type="text" name="keyword" list="cityList" placeholder="Nhập thành phố hoặc tên homestay...">
+        <datalist id="cityList">
+            <option th:each="c : ${cities}" th:value="${c}"></option>
+        </datalist>
+        <button type="submit" class="btn">Tìm kiếm</button>
+    </form>
+</section>
+
+<main class="container">
+    <div th:replace="~{fragments/layout :: flash}"></div>
+    <div class="alert alert-success" th:if="${param.logout}">Bạn đã đăng xuất.</div>
+
+    <div class="features">
+        <div class="feature"><div class="ico">🛏️</div><h3>Đặt phòng không trùng lịch</h3><p>Hệ thống khóa phòng, không lo bị đặt trùng.</p></div>
+        <div class="feature"><div class="ico">💳</div><h3>Thanh toán VNPay</h3><p>Thanh toán nhanh, an toàn qua cổng VNPay.</p></div>
+        <div class="feature"><div class="ico">✨</div><h3>Lịch trình bằng AI</h3><p>Gợi ý chuyến đi theo ngân sách và sở thích.</p></div>
+    </div>
+
+    <div class="section-title">
+        <h2>Homestay nổi bật</h2>
+        <a th:href="@{/homestays}">Xem tất cả →</a>
+    </div>
+    <p class="muted" th:if="${#lists.isEmpty(homestays)}">Chưa có homestay nào.</p>
+    <div class="grid">
+        <th:block th:each="h : ${homestays}">
+            <a th:replace="~{fragments/layout :: homestayCard(${h})}"></a>
+        </th:block>
+    </div>
+
+    <div class="card center" style="margin-top:32px">
+        <h3>✨ Chưa biết đi đâu, ở đâu?</h3>
+        <p class="muted">Nhập điểm đến và ngân sách, trợ lý AI sẽ lập lịch trình và gợi ý phòng phù hợp.</p>
+        <a class="btn" th:href="@{/ai}">Thử trợ lý AI</a>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

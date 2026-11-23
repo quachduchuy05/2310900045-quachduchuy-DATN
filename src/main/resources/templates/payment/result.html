@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Kết quả thanh toán')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<main class="container">
+    <div class="card pay-box">
+        <th:block th:if="${payment.status.name() == 'SUCCESS'}">
+            <div class="status-icon">✅</div>
+            <h2>Thanh toán thành công</h2>
+        </th:block>
+        <th:block th:if="${payment.status.name() != 'SUCCESS'}">
+            <div class="status-icon">❌</div>
+            <h2>Thanh toán không thành công</h2>
+            <p class="muted">Mã phản hồi: <span th:text="${payment.responseCode}">24</span></p>
+        </th:block>
+
+        <p>Đơn <b th:text="'#' + ${booking.id}">#1</b> ·
+            <span th:replace="~{fragments/layout :: bookingStatus(${booking.status})}"></span></p>
+        <p>Số tiền: <b class="price"><span th:text="${#numbers.formatDecimal(payment.amount, 0, 'POINT', 0, 'COMMA')}">0</span>đ</b></p>
+        <p class="muted" th:text="'Mã giao dịch: ' + ${payment.txnRef}"></p>
+        <p class="alert alert-error" th:if="${!#strings.isEmpty(booking.note) and #strings.contains(booking.note, 'HOÀN TIỀN')}"
+           th:text="${booking.note}"></p>
+
+        <a class="btn" th:href="@{/bookings/{id}(id=${booking.id})}">Xem đơn đặt phòng</a>
+    </div>
+</main>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

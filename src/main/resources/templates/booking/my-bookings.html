@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Đơn của tôi')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<main class="container">
+    <h2>Đơn đặt phòng của tôi</h2>
+    <div th:replace="~{fragments/layout :: flash}"></div>
+
+    <p class="muted" th:if="${#lists.isEmpty(bookings)}">
+        Bạn chưa có đơn nào. <a th:href="@{/homestays}">Tìm homestay ngay</a>
+    </p>
+
+    <div class="table-wrap" th:unless="${#lists.isEmpty(bookings)}">
+        <table>
+            <thead>
+            <tr><th>Mã</th><th>Homestay / Phòng</th><th>Ngày ở</th><th>Tổng tiền</th><th>Trạng thái</th><th></th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="b : ${bookings}">
+                <td th:text="'#' + ${b.id}">#1</td>
+                <td>
+                    <b th:text="${b.room.homestay.name}">Homestay</b><br>
+                    <span class="muted" th:text="${b.room.name}">Phòng</span>
+                </td>
+                <td>
+                    <span th:text="${#temporals.format(b.checkIn, 'dd/MM/yyyy')}"></span> →
+                    <span th:text="${#temporals.format(b.checkOut, 'dd/MM/yyyy')}"></span>
+                    <div class="muted" th:text="${b.nights} + ' đêm'"></div>
+                </td>
+                <td class="price"><span th:text="${#numbers.formatDecimal(b.totalPrice, 0, 'POINT', 0, 'COMMA')}">0</span>đ</td>
+                <td><span th:replace="~{fragments/layout :: bookingStatus(${b.status})}"></span></td>
+                <td><a class="btn btn-sm btn-outline" th:href="@{/bookings/{id}(id=${b.id})}">Chi tiết</a></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>
