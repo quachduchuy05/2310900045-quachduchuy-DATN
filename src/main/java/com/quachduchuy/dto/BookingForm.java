@@ -1,5 +1,6 @@
 package com.quachduchuy.dto;
 
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -25,5 +26,6 @@ public class BookingForm {
     @Min(value = 1, message = "Ít nhất 1 khách")
     private int guests = 1;
 
+    @Size(max = 300, message = "Ghi chú tối đa 300 ký tự")
     private String note;
 }

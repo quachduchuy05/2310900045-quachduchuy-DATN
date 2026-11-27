@@ -20,7 +20,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmail(UserService.normalizeEmail(email))
                 .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy tài khoản: " + email));
 
         return org.springframework.security.core.userdetails.User

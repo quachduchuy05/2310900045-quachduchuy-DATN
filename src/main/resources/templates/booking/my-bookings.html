@@ -2,38 +2,51 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Đơn của tôi')}"></head>
 <body>
-<nav th:replace="~{fragments/layout :: navbar}"></nav>
-<main class="container">
-    <h2>Đơn đặt phòng của tôi</h2>
-    <div th:replace="~{fragments/layout :: flash}"></div>
+<header th:replace="~{fragments/layout :: navbar}"></header>
+<main>
+    <section class="page-head">
+        <div class="wrap">
+            <div>
+                <span class="eyebrow">Chuyến đi của tôi</span>
+                <h1>Đơn đặt phòng</h1>
+            </div>
+            <div class="actions">
+                <a class="btn btn-outline" th:href="@{/payments}">Lịch sử thanh toán</a>
+                <a class="btn btn-book" th:href="@{/homestays}">Đặt phòng mới</a>
+            </div>
+        </div>
+    </section>
 
-    <p class="muted" th:if="${#lists.isEmpty(bookings)}">
-        Bạn chưa có đơn nào. <a th:href="@{/homestays}">Tìm homestay ngay</a>
-    </p>
+    <div class="container">
+        <div th:replace="~{fragments/layout :: flash}"></div>
 
-    <div class="table-wrap" th:unless="${#lists.isEmpty(bookings)}">
-        <table>
-            <thead>
-            <tr><th>Mã</th><th>Homestay / Phòng</th><th>Ngày ở</th><th>Tổng tiền</th><th>Trạng thái</th><th></th></tr>
-            </thead>
-            <tbody>
-            <tr th:each="b : ${bookings}">
-                <td th:text="'#' + ${b.id}">#1</td>
-                <td>
-                    <b th:text="${b.room.homestay.name}">Homestay</b><br>
-                    <span class="muted" th:text="${b.room.name}">Phòng</span>
-                </td>
-                <td>
-                    <span th:text="${#temporals.format(b.checkIn, 'dd/MM/yyyy')}"></span> →
-                    <span th:text="${#temporals.format(b.checkOut, 'dd/MM/yyyy')}"></span>
-                    <div class="muted" th:text="${b.nights} + ' đêm'"></div>
-                </td>
-                <td class="price"><span th:text="${#numbers.formatDecimal(b.totalPrice, 0, 'POINT', 0, 'COMMA')}">0</span>đ</td>
-                <td><span th:replace="~{fragments/layout :: bookingStatus(${b.status})}"></span></td>
-                <td><a class="btn btn-sm btn-outline" th:href="@{/bookings/{id}(id=${b.id})}">Chi tiết</a></td>
-            </tr>
-            </tbody>
-        </table>
+        <div class="empty" th:if="${#lists.isEmpty(bookings)}">
+            <span class="ico-box coral"><svg class="ic"><use href="#i-calendar"/></svg></span>
+            <h3>Bạn chưa có đơn nào</h3>
+            <p class="muted">Chọn một homestay và bắt đầu chuyến đi đầu tiên.</p>
+            <a class="btn btn-book" th:href="@{/homestays}">Tìm homestay ngay</a>
+        </div>
+
+        <article class="card trip" th:each="b : ${bookings}">
+            <img th:src="${#strings.isEmpty(b.room.imageUrl)} ? @{/images/placeholder.svg} : ${b.room.imageUrl}" th:alt="${b.room.name}" loading="lazy">
+            <div>
+                <span th:replace="~{fragments/layout :: bookingStatus(${b.status})}"></span>
+                <span class="muted small" th:text="'Đơn #' + ${b.id}">Đơn #1</span>
+                <h3 th:text="${b.room.homestay.name}">Homestay</h3>
+                <div class="muted" th:text="${b.room.name}">Phòng</div>
+                <div class="meta" style="margin:8px 0 0">
+                    <span><svg class="ic"><use href="#i-calendar"/></svg>
+                        <span th:text="${#temporals.format(b.checkIn, 'dd/MM/yyyy')} + ' → ' + ${#temporals.format(b.checkOut, 'dd/MM/yyyy')}"></span></span>
+                    <span><svg class="ic"><use href="#i-clock"/></svg><span th:text="${b.nights} + ' đêm'"></span></span>
+                </div>
+            </div>
+            <div class="trip-end">
+                <span class="price"><b th:text="${#numbers.formatDecimal(b.totalPrice, 0, 'POINT', 0, 'COMMA')} + 'đ'">0đ</b></span>
+                <a class="btn btn-sm" th:classappend="${b.status.name() == 'PENDING'} ? 'btn-book' : 'btn-outline'"
+                   th:href="@{/bookings/{id}(id=${b.id})}"
+                   th:text="${b.status.name() == 'PENDING'} ? 'Thanh toán ngay' : 'Xem chi tiết'">Chi tiết</a>
+            </div>
+        </article>
     </div>
 </main>
 <footer th:replace="~{fragments/layout :: footer}"></footer>

@@ -2,15 +2,21 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Phòng')}"></head>
 <body>
-<nav th:replace="~{fragments/layout :: navbar}"></nav>
-<main class="container">
+<header th:replace="~{fragments/layout :: navbar}"></header>
+<main>
+    <section class="page-head">
+        <div class="wrap">
+            <div>
+                <span class="eyebrow"><a th:href="@{/host}" style="color:inherit">← Quản lý nhà</a></span>
+                <h1>Phòng của <span th:text="${homestay.name}">Homestay</span></h1>
+            </div>
+            <div class="actions">
+                <a class="btn btn-book" th:href="@{/host/homestays/{id}/rooms/new(id=${homestay.id})}">+ Thêm phòng</a>
+            </div>
+        </div>
+    </section>
+    <div class="container">
     <div th:replace="~{fragments/layout :: flash}"></div>
-    <a th:href="@{/host}">← Quản lý nhà</a>
-
-    <div style="display:flex;justify-content:space-between;align-items:center">
-        <h2>Phòng của <span th:text="${homestay.name}">Homestay</span></h2>
-        <a class="btn" th:href="@{/host/homestays/{id}/rooms/new(id=${homestay.id})}">+ Thêm phòng</a>
-    </div>
 
     <p class="muted" th:if="${#lists.isEmpty(rooms)}">Chưa có phòng nào. Hãy thêm phòng để khách có thể đặt.</p>
     <div class="table-wrap" th:unless="${#lists.isEmpty(rooms)}">
@@ -35,6 +41,7 @@
             </tr>
             </tbody>
         </table>
+    </div>
     </div>
 </main>
 <footer th:replace="~{fragments/layout :: footer}"></footer>

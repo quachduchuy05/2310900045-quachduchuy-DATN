@@ -3,7 +3,9 @@ package com.quachduchuy.repository;
 import com.quachduchuy.entity.Booking;
 import com.quachduchuy.entity.BookingStatus;
 import com.quachduchuy.entity.User;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -12,6 +14,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
@@ -62,8 +65,18 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             """)
     List<Booking> findAllWithDetails();
 
+    /** Lấy đơn và khóa dòng, tránh hai luồng (thanh toán, hủy, tự hủy) cùng đổi trạng thái. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT b FROM Booking b WHERE b.id = :id")
+    Optional<Booking> findByIdForUpdate(@Param("id") Long id);
+
     /** Đơn PENDING tạo trước thời điểm "before" → đã quá hạn thanh toán. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     List<Booking> findByStatusAndCreatedAtBefore(BookingStatus status, LocalDateTime before);
+
+    /** Đơn có ngày trả phòng trước "date". */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    List<Booking> findByStatusAndCheckOutBefore(BookingStatus status, LocalDate date);
 
     long countByStatus(BookingStatus status);
 

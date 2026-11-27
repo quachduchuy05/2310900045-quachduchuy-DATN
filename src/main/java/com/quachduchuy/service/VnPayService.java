@@ -8,6 +8,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -50,7 +51,8 @@ public class VnPayService {
     }
 
     /** Tạo các tham số gửi sang VNPay (chưa ký). */
-    public Map<String, String> buildPaymentParams(String txnRef, BigDecimal amount, String orderInfo, String clientIp) {
+    public Map<String, String> buildPaymentParams(String txnRef, BigDecimal amount, String orderInfo, String clientIp,
+                                                  LocalDateTime expireAt) {
         LocalDateTime now = LocalDateTime.now(VN_ZONE);
 
         Map<String, String> params = new TreeMap<>(); // TreeMap tự sắp xếp key A→Z
@@ -67,7 +69,9 @@ public class VnPayService {
         params.put("vnp_ReturnUrl", returnUrl);
         params.put("vnp_IpAddr", clientIp);
         params.put("vnp_CreateDate", now.format(VNP_DATE));
-        params.put("vnp_ExpireDate", now.plusMinutes(15).format(VNP_DATE));
+        // expireAt theo giờ máy chủ → đổi sang giờ Việt Nam bằng khoảng thời gian còn lại
+        Duration remaining = Duration.between(LocalDateTime.now(), expireAt);
+        params.put("vnp_ExpireDate", now.plus(remaining).format(VNP_DATE));
         return params;
     }
 

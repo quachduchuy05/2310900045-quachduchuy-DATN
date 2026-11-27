@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -36,6 +37,7 @@ public class BookingService {
     public static final Set<BookingStatus> ACTIVE_STATUSES = Set.of(BookingStatus.PENDING, BookingStatus.PAID);
 
     private static final int MAX_NIGHTS = 30;
+    private static final int MAX_NOTE_LENGTH = 500;
 
     private final BookingRepository bookingRepository;
     private final RoomRepository roomRepository;
@@ -43,12 +45,56 @@ public class BookingService {
     @Value("${booking.pending-expire-minutes:15}")
     private int pendingExpireMinutes;
 
-    @Transactional
+    // READ_COMMITTED: sau khi giành được khóa phải nhìn thấy đơn mà giao dịch trước vừa ghi
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public Booking createBooking(User user, BookingForm form) {
+        // ---- Bước 1: kiểm tra dữ liệu ngày ----
+        long nights = checkDates(form);
+
+        // ---- Bước 2: lấy phòng và KHÓA lại cho tới hết transaction ----
+        Room room = lockRoom(form.getRoomId());
+
+        // ---- Bước 3: kiểm tra phòng, sức chứa và trùng lịch ----
+        checkRoom(room, form);
+
+        // ---- Bước 4: tạo đơn ở trạng thái chờ thanh toán ----
+        Booking booking = new Booking();
+        booking.setUser(user);
+        booking.setRoom(room);
+        booking.setCheckIn(form.getCheckIn());
+        booking.setCheckOut(form.getCheckOut());
+        booking.setGuests(form.getGuests());
+        booking.setNote(form.getNote());
+        booking.setTotalPrice(totalPrice(room, nights));
+        booking.setStatus(BookingStatus.PENDING);
+        return bookingRepository.save(booking);
+    }
+
+    /** Thông tin tạm tính hiển thị ở trang xác nhận. */
+    public record Quote(Room room, long nights, BigDecimal total) {
+    }
+
+    /**
+     * Kiểm tra và tính tiền mà chưa tạo đơn. Phòng chưa được giữ ở bước này,
+     * nên createBooking vẫn kiểm tra lại toàn bộ khi khách xác nhận.
+     */
+    @Transactional(readOnly = true)
+    public Quote preview(BookingForm form) {
+        long nights = checkDates(form);
+        Room room = roomRepository.findById(form.getRoomId())
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phòng"));
+        checkRoom(room, form);
+        room.getHomestay().getName(); // nạp sẵn để trang xác nhận dùng được
+        return new Quote(room, nights, totalPrice(room, nights));
+    }
+
+    public int getPendingExpireMinutes() {
+        return pendingExpireMinutes;
+    }
+
+    private long checkDates(BookingForm form) {
         LocalDate checkIn = form.getCheckIn();
         LocalDate checkOut = form.getCheckOut();
-
-        // ---- Bước 1: kiểm tra dữ liệu ngày ----
         if (checkIn.isBefore(LocalDate.now())) {
             throw new BusinessException("Ngày nhận phòng không được ở quá khứ");
         }
@@ -59,39 +105,40 @@ public class BookingService {
         if (nights > MAX_NIGHTS) {
             throw new BusinessException("Chỉ được đặt tối đa " + MAX_NIGHTS + " đêm");
         }
+        return nights;
+    }
 
-        // ---- Bước 2: lấy phòng và KHÓA lại cho tới hết transaction ----
-        Room room = roomRepository.findByIdForUpdate(form.getRoomId())
-                .orElseThrow(() -> new BusinessException("Không tìm thấy phòng"));
-
+    private void checkRoom(Room room, BookingForm form) {
         if (!room.isAvailable() || !room.getHomestay().isActive()) {
             throw new BusinessException("Phòng này hiện không nhận khách");
         }
         if (form.getGuests() > room.getCapacity()) {
             throw new BusinessException("Phòng chỉ chứa tối đa " + room.getCapacity() + " khách");
         }
-
-        // ---- Bước 3: kiểm tra trùng lịch ----
-        if (!isRoomFree(room.getId(), checkIn, checkOut)) {
+        if (!isRoomFree(room.getId(), form.getCheckIn(), form.getCheckOut())) {
             throw new BusinessException("Rất tiếc, phòng đã có người đặt trong khoảng ngày này. Vui lòng chọn ngày khác.");
         }
+    }
 
-        // ---- Bước 4: tạo đơn ở trạng thái chờ thanh toán ----
-        Booking booking = new Booking();
-        booking.setUser(user);
-        booking.setRoom(room);
-        booking.setCheckIn(checkIn);
-        booking.setCheckOut(checkOut);
-        booking.setGuests(form.getGuests());
-        booking.setNote(form.getNote());
-        booking.setTotalPrice(room.getPricePerNight().multiply(BigDecimal.valueOf(nights)));
-        booking.setStatus(BookingStatus.PENDING);
-        return bookingRepository.save(booking);
+    private BigDecimal totalPrice(Room room, long nights) {
+        return room.getPricePerNight().multiply(BigDecimal.valueOf(nights));
     }
 
     /** true nếu phòng còn trống trong khoảng [checkIn, checkOut). */
     public boolean isRoomFree(Long roomId, LocalDate checkIn, LocalDate checkOut) {
         return bookingRepository.countOverlapping(roomId, checkIn, checkOut, ACTIVE_STATUSES) == 0;
+    }
+
+    /** Khóa dòng phòng tới hết transaction hiện tại. */
+    public Room lockRoom(Long roomId) {
+        return roomRepository.findByIdForUpdate(roomId)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phòng"));
+    }
+
+    /** Khóa dòng đơn đặt tới hết transaction hiện tại. */
+    public Booking lockBooking(Long id) {
+        return bookingRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy đơn đặt phòng"));
     }
 
     /** Các khoảng ngày đã bị đặt của phòng, để hiển thị cho khách tránh chọn. */
@@ -126,8 +173,9 @@ public class BookingService {
     }
 
     /** Khách tự hủy đơn chưa thanh toán. */
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void cancelByUser(User user, Long bookingId) {
+        lockBooking(bookingId);
         Booking b = getOwnedBooking(user, bookingId);
         if (b.getStatus() != BookingStatus.PENDING) {
             throw new BusinessException("Chỉ hủy được đơn đang chờ thanh toán. Đơn đã thanh toán vui lòng liên hệ chủ nhà.");
@@ -136,12 +184,22 @@ public class BookingService {
     }
 
     /** Host (chủ phòng) hoặc Admin đổi trạng thái đơn, ví dụ đánh dấu khách đã ở xong. */
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void updateStatusByManager(User manager, Long bookingId, BookingStatus newStatus) {
-        Booking b = getBooking(bookingId);
+        Booking b = lockBooking(bookingId);
         boolean isOwnerHost = b.getRoom().getHomestay().getHost().getId().equals(manager.getId());
         if (!isOwnerHost && manager.getRole() != Role.ADMIN) {
             throw new BusinessException("Bạn không có quyền với đơn này");
+        }
+        if (!b.getStatus().canChangeTo(newStatus)) {
+            throw new BusinessException("Không thể chuyển đơn từ " + b.getStatus() + " sang " + newStatus);
+        }
+        // Chỉ Admin được xác nhận đã thu tiền ngoài cổng VNPay
+        if (newStatus == BookingStatus.PAID && manager.getRole() != Role.ADMIN) {
+            throw new BusinessException("Chỉ Admin được đánh dấu đơn đã thanh toán");
+        }
+        if (newStatus == BookingStatus.COMPLETED && LocalDate.now().isBefore(b.getCheckIn())) {
+            throw new BusinessException("Khách chưa tới ngày nhận phòng nên chưa thể hoàn tất đơn");
         }
         b.setStatus(newStatus);
     }
@@ -155,7 +213,7 @@ public class BookingService {
      * Chạy tự động mỗi phút: hủy các đơn PENDING quá hạn thanh toán để nhả phòng cho người khác.
      */
     @Scheduled(fixedRate = 60_000)
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void cancelExpiredBookings() {
         LocalDateTime deadline = LocalDateTime.now().minusMinutes(pendingExpireMinutes);
         List<Booking> expired = bookingRepository.findByStatusAndCreatedAtBefore(BookingStatus.PENDING, deadline);
@@ -168,6 +226,14 @@ public class BookingService {
         }
     }
 
+    /** Chạy mỗi giờ: đơn đã thanh toán và qua ngày trả phòng được chuyển sang hoàn tất. */
+    @Scheduled(fixedRate = 3_600_000)
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void completeFinishedBookings() {
+        bookingRepository.findByStatusAndCheckOutBefore(BookingStatus.PAID, LocalDate.now())
+                .forEach(b -> b.setStatus(BookingStatus.COMPLETED));
+    }
+
     // ---- Thống kê cho Admin ----
     public long countByStatus(BookingStatus status) {
         return bookingRepository.countByStatus(status);
@@ -177,7 +243,16 @@ public class BookingService {
         return bookingRepository.sumRevenue(Set.of(BookingStatus.PAID, BookingStatus.COMPLETED));
     }
 
-    private String appendNote(String oldNote, String extra) {
-        return (oldNote == null || oldNote.isBlank()) ? extra : oldNote + " | " + extra;
+    /** Nối ghi chú; nếu quá dài thì đưa phần mới lên đầu rồi cắt cho vừa cột. */
+    public String appendNote(String oldNote, String extra) {
+        if (oldNote == null || oldNote.isBlank()) {
+            return extra;
+        }
+        String joined = oldNote + " | " + extra;
+        if (joined.length() <= MAX_NOTE_LENGTH) {
+            return joined;
+        }
+        String reordered = extra + " | " + oldNote;
+        return reordered.substring(0, Math.min(reordered.length(), MAX_NOTE_LENGTH));
     }
 }

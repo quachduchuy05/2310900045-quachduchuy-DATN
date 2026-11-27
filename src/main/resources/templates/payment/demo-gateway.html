@@ -2,18 +2,19 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Cổng thanh toán giả lập')}"></head>
 <body>
-<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<header th:replace="~{fragments/layout :: navbar}"></header>
 <main class="container">
     <div class="card pay-box">
-        <h2>🏦 Cổng thanh toán giả lập</h2>
+        <div class="status-icon"><svg class="ic"><use href="#i-bank"/></svg></div>
+        <h2>Cổng thanh toán giả lập</h2>
         <div class="alert alert-info">Chế độ DEMO: chưa cấu hình VNPay thật nên hệ thống dùng trang này để mô phỏng.</div>
         <p>Mã giao dịch: <b th:text="${payment.txnRef}">123_456</b></p>
-        <p>Số tiền: <b class="price"><span th:text="${#numbers.formatDecimal(payment.amount, 0, 'POINT', 0, 'COMMA')}">0</span>đ</b></p>
+        <div class="pay-amount" th:text="${#numbers.formatDecimal(payment.amount, 0, 'POINT', 0, 'COMMA')} + 'đ'">0đ</div>
 
         <form th:action="@{/payment/demo-gateway}" method="post">
             <input type="hidden" name="txnRef" th:value="${payment.txnRef}">
-            <button type="submit" name="success" value="true" class="btn btn-ok">Thanh toán thành công</button>
-            <button type="submit" name="success" value="false" class="btn btn-danger">Hủy giao dịch</button>
+            <button type="submit" name="success" value="true" class="btn btn-ok btn-lg btn-block" style="margin-bottom:12px">Thanh toán thành công</button>
+            <button type="submit" name="success" value="false" class="btn btn-danger btn-block">Hủy giao dịch</button>
         </form>
     </div>
 </main>

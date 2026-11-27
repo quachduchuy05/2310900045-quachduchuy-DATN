@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Hồ sơ')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: navbar}"></header>
+<main>
+    <section class="page-head">
+        <div class="wrap">
+            <div>
+                <span class="eyebrow">Tài khoản</span>
+                <h1>Hồ sơ cá nhân</h1>
+            </div>
+        </div>
+    </section>
+    <div class="container">
+    <div class="form-medium">
+        <div th:replace="~{fragments/layout :: flash}"></div>
+        <th:block th:if="${param.google != null}">
+            <div class="alert alert-success" th:if="${param.google[0] == 'linked'}">Đã liên kết tài khoản Google.</div>
+            <div class="alert alert-error" th:unless="${param.google[0] == 'linked'}">
+                Không liên kết được. Hãy chọn đúng tài khoản Google có email trùng với email đăng nhập.
+            </div>
+        </th:block>
+
+        <div class="card">
+            <h3>Thông tin của tôi</h3>
+            <p class="muted">
+                <span th:text="${account.email}">email</span>
+                <span class="badge" th:text="${account.role}">USER</span>
+            </p>
+            <form th:action="@{/profile}" th:object="${profileForm}" method="post">
+                <label>Họ và tên
+                    <input type="text" th:field="*{fullName}">
+                    <span class="field-error" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></span>
+                </label>
+                <label>Số điện thoại
+                    <input type="text" th:field="*{phone}">
+                    <span class="field-error" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></span>
+                </label>
+                <button type="submit" class="btn">Lưu thay đổi</button>
+            </form>
+        </div>
+
+        <div class="card" th:if="${account.googleId != null or googleEnabled}">
+            <h3 style="margin-top:0">Đăng nhập Google</h3>
+            <p th:if="${account.googleOnly == true}" class="muted">Tài khoản này đăng nhập bằng Google, không dùng mật khẩu.</p>
+            <p th:if="${account.googleOnly != true and account.googleId != null}" class="muted">Đã liên kết: bạn có thể đăng nhập bằng mật khẩu hoặc Google.</p>
+            <form th:if="${account.googleId == null and googleEnabled}" th:action="@{/profile/google}" method="post">
+                <button type="submit" class="btn btn-outline">Liên kết tài khoản Google</button>
+            </form>
+        </div>
+
+        <div class="card" th:if="${account.googleOnly != true}">
+            <h3 style="margin-top:0">Đổi mật khẩu</h3>
+            <form th:action="@{/profile/password}" th:object="${passwordForm}" method="post">
+                <label>Mật khẩu hiện tại
+                    <input type="password" th:field="*{currentPassword}">
+                    <span class="field-error" th:if="${#fields.hasErrors('currentPassword')}" th:errors="*{currentPassword}"></span>
+                </label>
+                <label>Mật khẩu mới
+                    <input type="password" th:field="*{newPassword}">
+                    <span class="field-error" th:if="${#fields.hasErrors('newPassword')}" th:errors="*{newPassword}"></span>
+                </label>
+                <label>Nhập lại mật khẩu mới
+                    <input type="password" th:field="*{confirmPassword}">
+                </label>
+                <button type="submit" class="btn">Đổi mật khẩu</button>
+            </form>
+        </div>
+    </div>
+    </div>
+</main>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

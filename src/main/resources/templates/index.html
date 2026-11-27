@@ -1,46 +1,121 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head th:replace="~{fragments/layout :: head('Trang chủ')}"></head>
 <body>
-<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<header th:replace="~{fragments/layout :: navbar}"></header>
 
-<section class="hero">
-    <h1>Tìm homestay cho chuyến đi của bạn</h1>
-    <p>Đặt phòng nhanh, thanh toán VNPay, lịch trình do AI gợi ý.</p>
-    <form th:action="@{/homestays}" method="get">
-        <input type="text" name="keyword" list="cityList" placeholder="Nhập thành phố hoặc tên homestay...">
-        <datalist id="cityList">
-            <option th:each="c : ${cities}" th:value="${c}"></option>
-        </datalist>
-        <button type="submit" class="btn">Tìm kiếm</button>
-    </form>
-</section>
+<main>
+    <section class="hero">
+        <div class="wrap">
+            <span class="eyebrow"><svg class="ic"><use href="#i-spark"/></svg>Homestay Việt Nam</span>
+            <h1>Ở như người bản địa, <em>đi theo cách của bạn</em></h1>
+            <p class="lead">Chọn căn nhà ưng ý, đặt phòng trong vài phút và để trợ lý AI lên lịch trình cho chuyến đi.</p>
 
-<main class="container">
-    <div th:replace="~{fragments/layout :: flash}"></div>
-    <div class="alert alert-success" th:if="${param.logout}">Bạn đã đăng xuất.</div>
+            <form class="searchbar" th:action="@{/homestays}" method="get">
+                <label>Điểm đến
+                    <input type="text" name="keyword" list="cityList" placeholder="Bạn muốn đi đâu?">
+                    <datalist id="cityList"><option th:each="c : ${cities}" th:value="${c}"></option></datalist>
+                </label>
+                <label>Nhận phòng
+                    <input type="date" name="checkIn" th:min="${today}">
+                </label>
+                <label>Trả phòng
+                    <input type="date" name="checkOut" th:min="${today}">
+                </label>
+                <label>Số khách
+                    <input type="number" name="guests" min="1" placeholder="2">
+                </label>
+                <button type="submit" class="btn btn-book btn-lg"><svg class="ic"><use href="#i-search"/></svg>Tìm phòng</button>
+            </form>
 
-    <div class="features">
-        <div class="feature"><div class="ico">🛏️</div><h3>Đặt phòng không trùng lịch</h3><p>Hệ thống khóa phòng, không lo bị đặt trùng.</p></div>
-        <div class="feature"><div class="ico">💳</div><h3>Thanh toán VNPay</h3><p>Thanh toán nhanh, an toàn qua cổng VNPay.</p></div>
-        <div class="feature"><div class="ico">✨</div><h3>Lịch trình bằng AI</h3><p>Gợi ý chuyến đi theo ngân sách và sở thích.</p></div>
-    </div>
+            <div class="hero-stats">
+                <div><b th:text="${#lists.size(homestays)}">3</b>homestay đang mở</div>
+                <div><b th:text="${#lists.size(cities)}">3</b>điểm đến</div>
+                <div><b>24/7</b>đặt phòng trực tuyến</div>
+            </div>
+        </div>
+    </section>
 
-    <div class="section-title">
-        <h2>Homestay nổi bật</h2>
-        <a th:href="@{/homestays}">Xem tất cả →</a>
-    </div>
-    <p class="muted" th:if="${#lists.isEmpty(homestays)}">Chưa có homestay nào.</p>
-    <div class="grid">
-        <th:block th:each="h : ${homestays}">
-            <a th:replace="~{fragments/layout :: homestayCard(${h})}"></a>
-        </th:block>
-    </div>
+    <div class="container home">
+        <div class="features">
+            <div class="feature">
+                <span class="ico-box"><svg class="ic"><use href="#i-shield"/></svg></span>
+                <div><h3>Không lo trùng lịch</h3><p>Phòng được khóa khi đặt, hai người không thể giữ cùng một đêm.</p></div>
+            </div>
+            <div class="feature">
+                <span class="ico-box coral"><svg class="ic"><use href="#i-card"/></svg></span>
+                <div><h3>Thanh toán VNPay</h3><p>Trả tiền trực tuyến, theo dõi mọi giao dịch trong tài khoản.</p></div>
+            </div>
+            <div class="feature">
+                <span class="ico-box amber"><svg class="ic"><use href="#i-spark"/></svg></span>
+                <div><h3>Lịch trình bằng AI</h3><p>Gợi ý chuyến đi và phòng hợp với ngân sách, sở thích.</p></div>
+            </div>
+        </div>
 
-    <div class="card center" style="margin-top:32px">
-        <h3>✨ Chưa biết đi đâu, ở đâu?</h3>
-        <p class="muted">Nhập điểm đến và ngân sách, trợ lý AI sẽ lập lịch trình và gợi ý phòng phù hợp.</p>
-        <a class="btn" th:href="@{/ai}">Thử trợ lý AI</a>
+        <div style="margin-top:24px" th:if="${success != null or error != null}"><div th:replace="~{fragments/layout :: flash}"></div></div>
+        <div class="alert alert-success" style="margin-top:24px" th:if="${param.logout}">Bạn đã đăng xuất.</div>
+
+        <section class="section" th:if="${!#maps.isEmpty(destinations)}">
+            <div class="section-title">
+                <div><span class="eyebrow">Điểm đến</span><h2>Chuyến đi tiếp theo ở đâu?</h2></div>
+            </div>
+            <div class="destinations">
+                <a class="destination" th:each="d : ${destinations}" th:href="@{/homestays(keyword=${d.key})}">
+                    <img th:src="${#strings.isEmpty(d.value[0].imageUrl)} ? @{/images/placeholder.svg} : ${d.value[0].imageUrl}" th:alt="${d.key}" loading="lazy">
+                    <div class="label"><b th:text="${d.key}">Đà Lạt</b><span th:text="${#lists.size(d.value)} + ' homestay'">1 homestay</span></div>
+                </a>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-title">
+                <div><span class="eyebrow">Được chọn cho bạn</span><h2>Homestay nổi bật</h2></div>
+                <a class="link-arrow" th:href="@{/homestays}">Xem tất cả <svg class="ic"><use href="#i-arrow"/></svg></a>
+            </div>
+            <p class="empty muted" th:if="${#lists.isEmpty(homestays)}">Chưa có homestay nào.</p>
+            <div class="grid">
+                <th:block th:each="h, s : ${homestays}">
+                    <th:block th:if="${s.index < 6}">
+                        <a th:replace="~{fragments/layout :: homestayCard(${h})}"></a>
+                    </th:block>
+                </th:block>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-title">
+                <div><span class="eyebrow">Đơn giản</span><h2>Đặt phòng trong 3 bước</h2></div>
+            </div>
+            <div class="timeline">
+                <div><h3>Chọn phòng</h3><p>Lọc theo ngày còn trống, số khách và mức giá phù hợp.</p></div>
+                <div><h3>Xác nhận</h3><p>Xem trước số đêm và tổng tiền, phòng được giữ cho bạn.</p></div>
+                <div><h3>Thanh toán</h3><p>Thanh toán qua VNPay và nhận trạng thái đơn ngay lập tức.</p></div>
+            </div>
+        </section>
+
+        <section class="banner">
+            <div>
+                <span class="eyebrow"><svg class="ic"><use href="#i-spark"/></svg>Trợ lý du lịch AI</span>
+                <h2>Chưa biết đi đâu, ở đâu?</h2>
+                <p>Nhập điểm đến, ngân sách và sở thích. Trợ lý sẽ lập lịch trình từng ngày và gợi ý phòng có thật trên Staygo.</p>
+                <a class="btn btn-book btn-lg" th:href="@{/ai}">Lập lịch trình ngay <svg class="ic"><use href="#i-arrow"/></svg></a>
+            </div>
+            <div class="chat" aria-hidden="true">
+                <div class="me">3 ngày ở Đà Lạt, 2 người, thích cà phê và thiên nhiên</div>
+                <div class="bot">Ngày 1: nhận phòng, dạo đồi thông và uống cà phê ngắm hoàng hôn.</div>
+                <div class="bot">Ngày 2: săn mây buổi sáng, chiều ghé chợ Đà Lạt…</div>
+            </div>
+        </section>
+
+        <section class="host-cta" sec:authorize="isAnonymous() or hasAnyRole('HOST','ADMIN')">
+            <div>
+                <h3>Bạn có chỗ ở muốn cho thuê?</h3>
+                <p>Đăng homestay, quản lý phòng và theo dõi doanh thu tại một nơi.</p>
+            </div>
+            <a class="btn" sec:authorize="isAnonymous()" th:href="@{/register}">Đăng ký làm chủ nhà</a>
+            <a class="btn" sec:authorize="hasAnyRole('HOST','ADMIN')" th:href="@{/host}">Quản lý nhà của tôi</a>
+        </section>
     </div>
 </main>
 

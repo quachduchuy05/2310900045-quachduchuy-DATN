@@ -2,14 +2,17 @@ package com.quachduchuy.service;
 
 import com.quachduchuy.entity.*;
 import com.quachduchuy.exception.BusinessException;
+import com.quachduchuy.exception.PaymentException;
 import com.quachduchuy.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 /** Nghiệp vụ thanh toán: tạo giao dịch và xử lý kết quả VNPay trả về. */
@@ -45,7 +48,8 @@ public class PaymentService {
 
         Map<String, String> params = vnPayService.buildPaymentParams(
                 payment.getTxnRef(), payment.getAmount(),
-                "Thanh toan don dat phong " + booking.getId(), clientIp);
+                "Thanh toan don dat phong " + booking.getId(), clientIp,
+                bookingService.paymentDeadline(booking)); // hạn VNPay trùng hạn giữ phòng
 
         if (!vnPayService.isConfigured()) {
             return "/payment/demo-gateway?txnRef=" + payment.getTxnRef();
@@ -53,73 +57,119 @@ public class PaymentService {
         return vnPayService.buildPaymentUrl(params);
     }
 
+    /** Kết quả xử lý: alreadyProcessed = true nếu giao dịch đã được ghi nhận từ trước. */
+    public record PaymentResult(Payment payment, boolean alreadyProcessed) {
+    }
+
     /**
      * Xử lý kết quả VNPay gửi về (dùng chung cho Return URL và IPN).
      * Hàm này chạy được nhiều lần cho cùng một giao dịch mà không bị cộng trùng.
      */
-    @Transactional
-    public Payment handleVnPayResult(Map<String, String> params) {
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public PaymentResult handleVnPayResult(Map<String, String> params) {
         if (!vnPayService.verifySignature(params)) {
-            throw new BusinessException("Chữ ký không hợp lệ, dữ liệu thanh toán có thể đã bị sửa");
+            throw new PaymentException("97", "Chữ ký không hợp lệ, dữ liệu thanh toán có thể đã bị sửa");
         }
 
-        Payment payment = paymentRepository.findByTxnRef(params.get("vnp_TxnRef"))
-                .orElseThrow(() -> new BusinessException("Không tìm thấy giao dịch"));
-
-        if (payment.getStatus() != PaymentStatus.PENDING) {
-            return payment; // đã xử lý rồi (ví dụ IPN đến trước Return URL)
-        }
+        Payment payment = paymentRepository.findByTxnRefForUpdate(params.get("vnp_TxnRef"))
+                .orElseThrow(() -> new PaymentException("01", "Không tìm thấy giao dịch"));
 
         // Số tiền VNPay trả về phải khớp số tiền đã lưu
-        BigDecimal paidAmount = new BigDecimal(params.get("vnp_Amount")).divide(BigDecimal.valueOf(100));
-        boolean amountOk = paidAmount.compareTo(payment.getAmount()) == 0;
+        if (!amountMatches(params.get("vnp_Amount"), payment.getAmount())) {
+            throw new PaymentException("04", "Số tiền thanh toán không khớp");
+        }
+
+        if (payment.getStatus() != PaymentStatus.PENDING) {
+            return new PaymentResult(payment, true); // đã xử lý rồi (ví dụ IPN đến trước Return URL)
+        }
+
         boolean success = "00".equals(params.get("vnp_ResponseCode"))
-                && "00".equals(params.getOrDefault("vnp_TransactionStatus", "00"))
-                && amountOk;
+                && "00".equals(params.getOrDefault("vnp_TransactionStatus", "00"));
 
         payment.setResponseCode(params.get("vnp_ResponseCode"));
         payment.setVnpTransactionNo(params.get("vnp_TransactionNo"));
         payment.setBankCode(params.get("vnp_BankCode"));
 
-        Booking booking = payment.getBooking();
         if (success) {
             payment.setStatus(PaymentStatus.SUCCESS);
             payment.setPaidAt(LocalDateTime.now());
-            confirmBooking(booking);
+            confirmBooking(bookingService.lockBooking(payment.getBooking().getId()));
         } else {
             payment.setStatus(PaymentStatus.FAILED);
         }
-        return payment;
+        return new PaymentResult(payment, false);
+    }
+
+    /** vnp_Amount là số tiền nhân 100. */
+    private boolean amountMatches(String vnpAmount, BigDecimal expected) {
+        if (vnpAmount == null) {
+            return false;
+        }
+        try {
+            return new BigDecimal(vnpAmount).compareTo(expected.multiply(BigDecimal.valueOf(100))) == 0;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     /** Thanh toán thành công → chuyển đơn sang PAID. */
     private void confirmBooking(Booking booking) {
-        if (booking.getStatus() == BookingStatus.PENDING) {
-            booking.setStatus(BookingStatus.PAID);
-            return;
-        }
-        // Trường hợp hiếm: đơn đã bị tự hủy vì quá hạn nhưng khách vẫn trả tiền.
-        // Nếu phòng vẫn trống thì khôi phục đơn, ngược lại ghi chú để Admin hoàn tiền.
-        if (booking.getStatus() == BookingStatus.CANCELLED
-                && bookingService.isRoomFree(booking.getRoom().getId(), booking.getCheckIn(), booking.getCheckOut())) {
-            booking.setStatus(BookingStatus.PAID);
-        } else {
-            booking.setNote("Đã thanh toán nhưng phòng không còn trống - CẦN HOÀN TIỀN");
-            log.warn("Booking {} đã thanh toán nhưng không thể xác nhận, cần hoàn tiền", booking.getId());
+        switch (booking.getStatus()) {
+            case PENDING -> booking.setStatus(BookingStatus.PAID);
+            case CANCELLED -> {
+                // Đơn đã bị hủy nhưng khách vẫn trả tiền: còn trống thì khôi phục, ngược lại cần hoàn tiền
+                Long roomId = booking.getRoom().getId();
+                bookingService.lockRoom(roomId);
+                if (bookingService.isRoomFree(roomId, booking.getCheckIn(), booking.getCheckOut())) {
+                    booking.setStatus(BookingStatus.PAID);
+                } else {
+                    requireRefund(booking, "Đã thanh toán nhưng phòng không còn trống - CẦN HOÀN TIỀN");
+                }
+            }
+            case PAID, COMPLETED -> requireRefund(booking, "Khách thanh toán trùng - CẦN HOÀN TIỀN");
         }
     }
 
-    public Payment getByTxnRef(String txnRef) {
-        return paymentRepository.findByTxnRef(txnRef)
+    private void requireRefund(Booking booking, String reason) {
+        booking.setNote(bookingService.appendNote(booking.getNote(), reason));
+        log.warn("Booking {}: {}", booking.getId(), reason);
+    }
+
+    // ---- Lịch sử thanh toán ----
+    public List<Payment> historyOfGuest(User guest) {
+        return paymentRepository.findByGuest(guest);
+    }
+
+    public List<Payment> historyOfHost(User host) {
+        return paymentRepository.findByHost(host);
+    }
+
+    public List<Payment> historyAll() {
+        return paymentRepository.findAllWithDetails();
+    }
+
+    public List<Payment> historyOfBooking(Booking booking) {
+        return paymentRepository.findByBookingOrderByCreatedAtDesc(booking);
+    }
+
+    /** Lấy giao dịch và đảm bảo nó thuộc đơn của người đang đăng nhập. */
+    @Transactional(readOnly = true)
+    public Payment getOwnedPayment(User user, String txnRef) {
+        Payment payment = paymentRepository.findByTxnRef(txnRef)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy giao dịch"));
+        if (!payment.getBooking().getUser().getId().equals(user.getId())) {
+            throw new BusinessException("Bạn không có quyền với giao dịch này");
+        }
+        return payment;
     }
 
     /**
      * CHỈ DÙNG KHI DEMO (chưa có tài khoản VNPay sandbox):
      * tạo bộ tham số giống hệt VNPay trả về, có chữ ký hợp lệ, để chạy đủ luồng thanh toán.
      */
-    public String buildDemoReturnQuery(String txnRef, boolean success) {
-        Payment payment = getByTxnRef(txnRef);
+    @Transactional(readOnly = true)
+    public String buildDemoReturnQuery(User user, String txnRef, boolean success) {
+        Payment payment = getOwnedPayment(user, txnRef);
         Map<String, String> result = new java.util.TreeMap<>();
         result.put("vnp_TxnRef", txnRef);
         result.put("vnp_Amount", payment.getAmount().multiply(BigDecimal.valueOf(100)).toBigInteger().toString());

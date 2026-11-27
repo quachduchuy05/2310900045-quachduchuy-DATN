@@ -2,24 +2,71 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Tìm homestay')}"></head>
 <body>
-<nav th:replace="~{fragments/layout :: navbar}"></nav>
-<main class="container">
-    <div th:replace="~{fragments/layout :: flash}"></div>
-    <form th:action="@{/homestays}" method="get" style="display:flex;gap:8px;margin-bottom:20px">
-        <input type="text" name="keyword" th:value="${keyword}" placeholder="Thành phố hoặc tên homestay...">
-        <button type="submit" class="btn">Tìm</button>
-    </form>
+<header th:replace="~{fragments/layout :: navbar}"></header>
+<main>
+    <section class="page-head">
+        <div class="wrap">
+            <div>
+                <span class="eyebrow">Khám phá</span>
+                <h1>Tìm nơi ở cho chuyến đi</h1>
+                <p>Lọc theo ngày còn phòng, số khách và ngân sách của bạn.</p>
+            </div>
+        </div>
+    </section>
 
-    <h2 th:if="${keyword != null and !#strings.isEmpty(keyword)}">
-        Kết quả cho "<span th:text="${keyword}"></span>" (<span th:text="${#lists.size(homestays)}">0</span>)
-    </h2>
-    <h2 th:unless="${keyword != null and !#strings.isEmpty(keyword)}">Tất cả homestay</h2>
+    <div class="container">
+        <div th:replace="~{fragments/layout :: flash}"></div>
+        <div class="search-layout">
+            <aside class="card filters">
+                <h3 class="card-title"><svg class="ic"><use href="#i-search"/></svg>Bộ lọc</h3>
+                <form th:action="@{/homestays}" th:object="${search}" method="get">
+                    <label>Điểm đến / tên
+                        <input type="text" th:field="*{keyword}" list="cityList" placeholder="Đà Lạt...">
+                        <datalist id="cityList"><option th:each="c : ${cities}" th:value="${c}"></option></datalist>
+                    </label>
+                    <label>Nhận phòng
+                        <input type="date" name="checkIn" th:value="*{checkIn}" th:min="${today}">
+                    </label>
+                    <label>Trả phòng
+                        <input type="date" name="checkOut" th:value="*{checkOut}" th:min="${today}">
+                    </label>
+                    <label>Số khách
+                        <input type="number" name="guests" th:value="*{guests}" min="1">
+                    </label>
+                    <label>Giá tối đa / đêm
+                        <input type="number" name="maxPrice" th:value="*{maxPrice}" min="0" step="50000" placeholder="Không giới hạn">
+                    </label>
+                    <label>Sắp xếp
+                        <select th:field="*{sort}">
+                            <option value="newest">Mới nhất</option>
+                            <option value="priceAsc">Giá thấp đến cao</option>
+                            <option value="priceDesc">Giá cao đến thấp</option>
+                            <option value="rating">Đánh giá cao nhất</option>
+                        </select>
+                    </label>
+                    <button type="submit" class="btn btn-book btn-block">Áp dụng</button>
+                    <a class="btn btn-outline btn-block" th:href="@{/homestays}">Xóa bộ lọc</a>
+                </form>
+            </aside>
 
-    <p class="muted" th:if="${#lists.isEmpty(homestays)}">Không tìm thấy homestay phù hợp.</p>
-    <div class="grid">
-        <th:block th:each="h : ${homestays}">
-            <a th:replace="~{fragments/layout :: homestayCard(${h})}"></a>
-        </th:block>
+            <section>
+                <div class="alert alert-error" th:if="${searchError}" th:text="${searchError}"></div>
+                <div class="results-bar">
+                    <h2><span th:text="${#lists.size(homestays)}">0</span> homestay phù hợp</h2>
+                </div>
+                <div class="empty" th:if="${#lists.isEmpty(homestays)}">
+                    <span class="ico-box amber"><svg class="ic"><use href="#i-search"/></svg></span>
+                    <h3>Không tìm thấy homestay phù hợp</h3>
+                    <p class="muted">Hãy thử đổi ngày hoặc nới bộ lọc.</p>
+                    <a class="btn btn-outline" th:href="@{/homestays}">Xem tất cả</a>
+                </div>
+                <div class="grid">
+                    <th:block th:each="h : ${homestays}">
+                        <a th:replace="~{fragments/layout :: homestayCard(${h})}"></a>
+                    </th:block>
+                </div>
+            </section>
+        </div>
     </div>
 </main>
 <footer th:replace="~{fragments/layout :: footer}"></footer>

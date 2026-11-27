@@ -48,7 +48,16 @@ public class Homestay {
     @OneToMany(mappedBy = "homestay", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Room> rooms = new ArrayList<>();
 
+    @OneToMany(mappedBy = "homestay", cascade = CascadeType.REMOVE)
+    @OrderBy("createdAt DESC")
+    private List<Review> reviews = new ArrayList<>();
+
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    /** Điểm trung bình (0 nếu chưa có đánh giá). */
+    public double getAverageRating() {
+        return reviews.stream().mapToInt(Review::getRating).average().orElse(0);
+    }
 
     /** Giá thấp nhất trong các phòng (hiển thị "Từ ...đ / đêm"). Trả về null nếu chưa có phòng. */
     public BigDecimal getMinPrice() {

@@ -1,5 +1,12 @@
 package com.quachduchuy.controller;
 
+import com.quachduchuy.entity.Booking;
+import com.quachduchuy.exception.BusinessException;
+import com.quachduchuy.service.FileStorageService;
+import org.springframework.web.multipart.MultipartFile;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.function.Consumer;
 import com.quachduchuy.dto.HomestayForm;
 import com.quachduchuy.dto.RoomForm;
 import com.quachduchuy.entity.BookingStatus;
@@ -11,6 +18,7 @@ import com.quachduchuy.service.HomestayService;
 import com.quachduchuy.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -28,12 +36,22 @@ public class HostController {
     private final HomestayService homestayService;
     private final BookingService bookingService;
     private final UserService userService;
+    private final FileStorageService fileStorageService;
 
     @GetMapping
     public String dashboard(Principal principal, Model model) {
         User host = userService.getCurrentUser(principal);
         model.addAttribute("homestays", homestayService.findByHost(host));
-        model.addAttribute("bookings", bookingService.findByHost(host));
+        List<Booking> bookings = bookingService.findByHost(host);
+        model.addAttribute("bookings", bookings);
+        model.addAttribute("pendingCount", bookings.stream()
+                .filter(b -> b.getStatus() == BookingStatus.PENDING).count());
+        model.addAttribute("paidCount", bookings.stream()
+                .filter(b -> b.getStatus() == BookingStatus.PAID).count());
+        model.addAttribute("revenue", bookings.stream()
+                .filter(b -> b.getStatus() == BookingStatus.PAID || b.getStatus() == BookingStatus.COMPLETED)
+                .map(Booking::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
         return "host/dashboard";
     }
 
@@ -49,6 +67,7 @@ public class HostController {
     @PostMapping("/homestays/new")
     public String createHomestay(@Valid @ModelAttribute("form") HomestayForm form, BindingResult result,
                                  Principal principal, RedirectAttributes redirect) {
+        storeImage(form.getImageFile(), form::setImageUrl, result);
         if (result.hasErrors()) {
             return "host/homestay-form";
         }
@@ -69,6 +88,8 @@ public class HostController {
     public String updateHomestay(@PathVariable Long id, @Valid @ModelAttribute("form") HomestayForm form,
                                  BindingResult result, Principal principal, Model model,
                                  RedirectAttributes redirect) {
+        homestayService.getOwnedHomestay(userService.getCurrentUser(principal), id); // kiểm tra quyền trước khi lưu ảnh
+        storeImage(form.getImageFile(), form::setImageUrl, result);
         if (result.hasErrors()) {
             model.addAttribute("homestayId", id);
             return "host/homestay-form";
@@ -83,7 +104,7 @@ public class HostController {
         try {
             homestayService.deleteHomestay(userService.getCurrentUser(principal), id);
             redirect.addFlashAttribute("success", "Đã xóa homestay");
-        } catch (Exception e) {
+        } catch (DataIntegrityViolationException e) {
             // Không xóa được khi đã có đơn đặt (ràng buộc khóa ngoại) → gợi ý ẩn thay vì xóa
             redirect.addFlashAttribute("error", "Không thể xóa homestay đã có đơn đặt phòng. Hãy tạm ngưng các phòng thay vì xóa.");
         }
@@ -101,7 +122,8 @@ public class HostController {
     }
 
     @GetMapping("/homestays/{homestayId}/rooms/new")
-    public String newRoom(@PathVariable Long homestayId, Model model) {
+    public String newRoom(@PathVariable Long homestayId, Principal principal, Model model) {
+        homestayService.getOwnedHomestay(userService.getCurrentUser(principal), homestayId);
         model.addAttribute("form", new RoomForm());
         model.addAttribute("homestayId", homestayId);
         model.addAttribute("roomId", null);
@@ -112,6 +134,8 @@ public class HostController {
     public String createRoom(@PathVariable Long homestayId, @Valid @ModelAttribute("form") RoomForm form,
                              BindingResult result, Principal principal, Model model,
                              RedirectAttributes redirect) {
+        homestayService.getOwnedHomestay(userService.getCurrentUser(principal), homestayId);
+        storeImage(form.getImageFile(), form::setImageUrl, result);
         if (result.hasErrors()) {
             model.addAttribute("homestayId", homestayId);
             model.addAttribute("roomId", null);
@@ -137,6 +161,7 @@ public class HostController {
                              RedirectAttributes redirect) {
         User user = userService.getCurrentUser(principal);
         Long homestayId = homestayService.getOwnedRoom(user, roomId).getHomestay().getId();
+        storeImage(form.getImageFile(), form::setImageUrl, result);
         if (result.hasErrors()) {
             model.addAttribute("homestayId", homestayId);
             model.addAttribute("roomId", roomId);
@@ -154,10 +179,22 @@ public class HostController {
         try {
             homestayService.deleteRoom(user, roomId);
             redirect.addFlashAttribute("success", "Đã xóa phòng");
-        } catch (Exception e) {
+        } catch (DataIntegrityViolationException e) {
             redirect.addFlashAttribute("error", "Phòng đã có đơn đặt nên không thể xóa. Hãy chuyển sang 'Tạm ngưng'.");
         }
         return "redirect:/host/homestays/" + homestayId + "/rooms";
+    }
+
+    /** Nếu form có file ảnh thì lưu và dùng ảnh đó thay cho link; chỉ lưu khi form không có lỗi khác. */
+    private void storeImage(MultipartFile file, Consumer<String> setImageUrl, BindingResult result) {
+        if (file == null || file.isEmpty() || result.hasErrors()) {
+            return;
+        }
+        try {
+            setImageUrl.accept(fileStorageService.store(file));
+        } catch (BusinessException e) {
+            result.rejectValue("imageFile", "upload", e.getMessage());
+        }
     }
 
     // ===================== ĐƠN ĐẶT =====================

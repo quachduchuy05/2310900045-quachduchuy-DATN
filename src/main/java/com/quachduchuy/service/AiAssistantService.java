@@ -9,7 +9,6 @@ import com.quachduchuy.repository.RoomRepository;
 import com.quachduchuy.repository.TripPlanRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -37,7 +36,7 @@ public class AiAssistantService {
     private final TripPlanRepository tripPlanRepository;
     private final GeminiService geminiService;
 
-    @Transactional
+    // Không đặt @Transactional: tránh giữ kết nối DB trong lúc chờ Gemini trả lời
     public AiSuggestion planTrip(User user, TripPlanRequest req) {
         int nights = Math.max(1, req.getDays() - 1);
 

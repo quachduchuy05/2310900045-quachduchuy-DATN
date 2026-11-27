@@ -2,12 +2,12 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Phòng')}"></head>
 <body>
-<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<header th:replace="~{fragments/layout :: navbar}"></header>
 <main class="container">
     <div class="card form-medium">
         <h2 th:text="${roomId == null} ? 'Thêm phòng' : 'Sửa phòng'">Phòng</h2>
 
-        <form th:object="${form}" method="post"
+        <form th:object="${form}" method="post" enctype="multipart/form-data"
               th:action="${roomId == null} ? @{/host/homestays/{id}/rooms/new(id=${homestayId})} : @{/host/rooms/{id}/edit(id=${roomId})}">
             <label>Tên phòng
                 <input type="text" th:field="*{name}">
@@ -25,9 +25,16 @@
             </div>
             <label>Mô tả
                 <textarea th:field="*{description}" rows="3"></textarea>
+                <span class="field-error" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></span>
             </label>
             <label>Link ảnh
-                <input type="url" th:field="*{imageUrl}" placeholder="https://...">
+                <input type="text" th:field="*{imageUrl}" placeholder="https://...">
+                <span class="field-error" th:if="${#fields.hasErrors('imageUrl')}" th:errors="*{imageUrl}"></span>
+            </label>
+            <label>Hoặc tải ảnh từ máy (JPG, PNG, GIF, WEBP, tối đa 5MB)
+                <input type="file" name="imageFile" accept="image/jpeg,image/png,image/gif,image/webp"
+                       onchange="if (this.files[0] && this.files[0].size > 5 * 1024 * 1024) { alert('Ảnh tối đa 5MB'); this.value = ''; }">
+                <span class="field-error" th:if="${#fields.hasErrors('imageFile')}" th:errors="*{imageFile}"></span>
             </label>
             <label class="check">
                 <input type="checkbox" th:field="*{available}"> Đang nhận khách

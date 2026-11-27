@@ -2,9 +2,10 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Có lỗi xảy ra')}"></head>
 <body>
-<nav th:replace="~{fragments/layout :: navbar}"></nav>
-<main class="container center">
-    <h1>⚠️ Không thực hiện được</h1>
+<header th:replace="~{fragments/layout :: navbar}"></header>
+<main class="container error-page">
+    <div class="code">!</div>
+    <h1>Không thực hiện được</h1>
     <p class="alert alert-error" style="display:inline-block" th:text="${message}">Thông báo lỗi</p>
     <p><a class="btn" href="javascript:history.back()">← Quay lại</a> <a class="btn btn-outline" th:href="@{/}">Trang chủ</a></p>
 </main>

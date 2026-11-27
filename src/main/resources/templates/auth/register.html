@@ -2,38 +2,53 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Đăng ký')}"></head>
 <body>
-<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<header th:replace="~{fragments/layout :: navbar}"></header>
 <main class="container">
-    <div class="card form-narrow">
-        <h2>Đăng ký tài khoản</h2>
-        <div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+    <div class="auth">
+        <div class="auth-visual">
+            <h2>Tham gia Staygo.</h2>
+            <ul>
+                <li><svg class="ic"><use href="#i-check"/></svg>Khách: đặt phòng và thanh toán nhanh</li>
+                <li><svg class="ic"><use href="#i-check"/></svg>Chủ nhà: đăng homestay, quản lý phòng</li>
+                <li><svg class="ic"><use href="#i-check"/></svg>Theo dõi doanh thu và giao dịch</li>
+            </ul>
+        </div>
+        <div class="auth-form">
+            <h1>Tạo tài khoản</h1>
+            <p class="muted">Chỉ mất một phút.</p>
+            <div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
 
-        <form th:action="@{/register}" th:object="${form}" method="post">
-            <label>Họ và tên
-                <input type="text" th:field="*{fullName}">
-                <span class="field-error" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></span>
-            </label>
-            <label>Email
-                <input type="email" th:field="*{email}">
-                <span class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
-            </label>
-            <label>Số điện thoại
-                <input type="text" th:field="*{phone}">
-            </label>
-            <label>Mật khẩu
-                <input type="password" th:field="*{password}">
-                <span class="field-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></span>
-            </label>
-            <label>Nhập lại mật khẩu
-                <input type="password" th:field="*{confirmPassword}">
-            </label>
-            <label class="check">
-                <input type="checkbox" th:field="*{registerAsHost}">
-                Tôi muốn đăng ký làm chủ nhà (đăng homestay cho thuê)
-            </label>
-            <button type="submit" class="btn" style="width:100%">Đăng ký</button>
-        </form>
-        <p class="center muted">Đã có tài khoản? <a th:href="@{/login}">Đăng nhập</a></p>
+            <form th:action="@{/register}" th:object="${form}" method="post">
+                <label>Họ và tên
+                    <input type="text" th:field="*{fullName}">
+                    <span class="field-error" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></span>
+                </label>
+                <label>Email
+                    <input type="email" th:field="*{email}">
+                    <span class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
+                </label>
+                <label>Số điện thoại
+                    <input type="text" th:field="*{phone}">
+                    <span class="field-error" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></span>
+                </label>
+                <div class="row">
+                    <label>Mật khẩu
+                        <input type="password" th:field="*{password}">
+                        <span class="field-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></span>
+                    </label>
+                    <label>Nhập lại mật khẩu
+                        <input type="password" th:field="*{confirmPassword}">
+                    </label>
+                </div>
+                <label class="check">
+                    <input type="checkbox" th:field="*{registerAsHost}">
+                    Tôi muốn đăng ký làm chủ nhà (đăng homestay cho thuê)
+                </label>
+                <button type="submit" class="btn btn-lg btn-block">Đăng ký</button>
+            </form>
+            <div th:replace="~{fragments/layout :: googleButton}"></div>
+            <p class="center muted">Đã có tài khoản? <a th:href="@{/login}"><b>Đăng nhập</b></a></p>
+        </div>
     </div>
 </main>
 <footer th:replace="~{fragments/layout :: footer}"></footer>

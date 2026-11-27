@@ -1,5 +1,10 @@
 package com.quachduchuy.service;
 
+import com.quachduchuy.dto.SearchForm;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
 import com.quachduchuy.dto.HomestayForm;
 import com.quachduchuy.dto.RoomForm;
 import com.quachduchuy.entity.Homestay;
@@ -20,16 +25,52 @@ import java.util.List;
 @RequiredArgsConstructor
 public class HomestayService {
 
+    private static final BigDecimal NO_PRICE_LIMIT = new BigDecimal("999999999999");
+
     private final HomestayRepository homestayRepository;
     private final RoomRepository roomRepository;
 
     // ===================== DÀNH CHO KHÁCH =====================
 
-    public List<Homestay> search(String keyword) {
-        if (keyword == null || keyword.isBlank()) {
-            return homestayRepository.findByActiveTrueOrderByCreatedAtDesc();
+    /** Homestay đang hoạt động, mới nhất trước (trang chủ). */
+    public List<Homestay> findLatest() {
+        return homestayRepository.findByActiveTrueOrderByCreatedAtDesc();
+    }
+
+    /** Tìm kiếm nâng cao: từ khóa, ngày còn trống, số khách, giá tối đa, sắp xếp. */
+    public List<Homestay> search(SearchForm form) {
+        LocalDate checkIn = form.getCheckIn();
+        LocalDate checkOut = form.getCheckOut();
+        boolean hasDates = checkIn != null || checkOut != null;
+        if (hasDates) {
+            if (checkIn == null || checkOut == null) {
+                throw new BusinessException("Hãy chọn cả ngày nhận và ngày trả phòng");
+            }
+            if (checkIn.isBefore(LocalDate.now()) || !checkOut.isAfter(checkIn)) {
+                throw new BusinessException("Khoảng ngày không hợp lệ");
+            }
+        } else {
+            // khoảng rỗng trong quá khứ: không đơn nào giao nhau
+            checkIn = checkOut = LocalDate.of(1900, 1, 1);
         }
-        return homestayRepository.search(keyword.trim());
+        boolean filterRooms = hasDates || form.getGuests() != null || form.getMaxPrice() != null;
+        List<Homestay> found = new ArrayList<>(homestayRepository.filter(
+                form.getKeyword() == null ? "" : form.getKeyword().trim(),
+                filterRooms,
+                form.getGuests() == null ? 1 : form.getGuests(),
+                form.getMaxPrice() == null ? NO_PRICE_LIMIT : form.getMaxPrice().min(NO_PRICE_LIMIT),
+                checkIn, checkOut, BookingService.ACTIVE_STATUSES));
+
+        Comparator<Homestay> byPrice = Comparator.comparing(Homestay::getMinPrice,
+                Comparator.nullsLast(Comparator.naturalOrder()));
+        switch (form.getSort() == null ? "" : form.getSort()) {
+            case "priceAsc" -> found.sort(byPrice);
+            case "priceDesc" -> found.sort(Comparator.comparing(Homestay::getMinPrice,
+                    Comparator.nullsLast(Comparator.reverseOrder())));
+            case "rating" -> found.sort(Comparator.comparingDouble(Homestay::getAverageRating).reversed());
+            default -> { /* giữ thứ tự mới nhất */ }
+        }
+        return found;
     }
 
     public List<String> findAllCities() {

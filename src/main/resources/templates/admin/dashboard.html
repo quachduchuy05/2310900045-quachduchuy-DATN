@@ -2,21 +2,52 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Quản trị')}"></head>
 <body>
-<nav th:replace="~{fragments/layout :: navbar}"></nav>
-<main class="container">
-    <h2>Bảng điều khiển quản trị</h2>
+<header th:replace="~{fragments/layout :: navbar}"></header>
+<main>
+    <section class="page-head">
+        <div class="wrap">
+            <div>
+                <span class="eyebrow">Quản trị hệ thống</span>
+                <h1>Bảng điều khiển</h1>
+            </div>
+            <div class="actions">
+                <a class="btn btn-book" th:href="@{/admin/payments}">Lịch sử giao dịch</a>
+            </div>
+        </div>
+    </section>
+    <div class="container">
     <div th:replace="~{fragments/layout :: flash}"></div>
 
     <div class="stats">
-        <div class="stat"><div class="muted">Người dùng</div><div class="num" th:text="${totalUsers}">0</div></div>
-        <div class="stat"><div class="muted">Homestay</div><div class="num" th:text="${totalHomestays}">0</div></div>
-        <div class="stat"><div class="muted">Đơn chờ thanh toán</div><div class="num" th:text="${pendingCount}">0</div></div>
-        <div class="stat"><div class="muted">Đơn đã thanh toán</div><div class="num" th:text="${paidCount}">0</div></div>
-        <div class="stat"><div class="muted">Doanh thu</div>
-            <div class="num"><span th:text="${#numbers.formatDecimal(revenue, 0, 'POINT', 0, 'COMMA')}">0</span>đ</div></div>
+        <div class="stat">
+            <span class="ico-box"><svg class="ic"><use href="#i-users"/></svg></span>
+            <div><div class="muted">Người dùng</div><div class="num" th:text="${totalUsers}">0</div></div>
+        </div>
+        <div class="stat">
+            <span class="ico-box"><svg class="ic"><use href="#i-home"/></svg></span>
+            <div><div class="muted">Homestay</div><div class="num" th:text="${totalHomestays}">0</div></div>
+        </div>
+        <div class="stat">
+            <span class="ico-box amber"><svg class="ic"><use href="#i-clock"/></svg></span>
+            <div><div class="muted">Đơn chờ thanh toán</div><div class="num" th:text="${pendingCount}">0</div></div>
+        </div>
+        <div class="stat">
+            <span class="ico-box"><svg class="ic"><use href="#i-check"/></svg></span>
+            <div><div class="muted">Đơn đã thanh toán</div><div class="num" th:text="${paidCount}">0</div></div>
+        </div>
+        <div class="stat">
+            <span class="ico-box coral"><svg class="ic"><use href="#i-wallet"/></svg></span>
+            <div><div class="muted">Doanh thu</div><div class="num" th:text="${#numbers.formatDecimal(revenue, 0, 'POINT', 0, 'COMMA')} + 'đ'">0đ</div></div>
+        </div>
     </div>
 
-    <h3 id="users">Người dùng</h3>
+    <div class="tabs">
+        <a href="#users">Người dùng</a>
+        <a href="#homestays">Homestay</a>
+        <a href="#bookings">Đơn đặt phòng</a>
+    </div>
+
+    <h3 class="table-title" id="users">Người dùng <span class="badge" th:text="${#lists.size(users)}">0</span></h3>
     <div class="table-wrap">
         <table>
             <thead><tr><th>ID</th><th>Họ tên</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th><th></th></tr></thead>
@@ -48,7 +79,7 @@
         </table>
     </div>
 
-    <h3 id="homestays">Homestay</h3>
+    <h3 class="table-title" id="homestays">Homestay <span class="badge" th:text="${#lists.size(homestays)}">0</span></h3>
     <div class="table-wrap">
         <table>
             <thead><tr><th>ID</th><th>Tên</th><th>Thành phố</th><th>Chủ nhà</th><th>Trạng thái</th><th></th></tr></thead>
@@ -72,7 +103,7 @@
         </table>
     </div>
 
-    <h3 id="bookings">Đơn đặt phòng</h3>
+    <h3 class="table-title" id="bookings">Đơn đặt phòng <span class="badge" th:text="${#lists.size(bookings)}">0</span></h3>
     <div class="table-wrap">
         <table>
             <thead><tr><th>Mã</th><th>Khách</th><th>Homestay / Phòng</th><th>Ngày ở</th><th>Tiền</th><th>Trạng thái</th><th>Cập nhật</th></tr></thead>
@@ -91,10 +122,11 @@
                     <div class="muted" style="font-size:.8rem" th:if="${!#strings.isEmpty(b.note)}" th:text="${b.note}"></div>
                 </td>
                 <td>
-                    <form th:action="@{/admin/bookings/{id}/status(id=${b.id})}" method="post" style="display:flex;gap:6px">
+                    <form th:if="${b.status.name() == 'PENDING' or b.status.name() == 'PAID'}"
+                          th:action="@{/admin/bookings/{id}/status(id=${b.id})}" method="post" style="display:flex;gap:6px">
                         <select name="status" style="width:auto">
-                            <option th:each="s : ${T(com.quachduchuy.entity.BookingStatus).values()}"
-                                    th:value="${s}" th:text="${s}" th:selected="${s == b.status}"></option>
+                            <option th:each="s : ${statuses}" th:if="${b.status.canChangeTo(s)}"
+                                    th:value="${s}" th:text="${s}"></option>
                         </select>
                         <button type="submit" class="btn btn-sm btn-outline">Lưu</button>
                     </form>
@@ -102,6 +134,7 @@
             </tr>
             </tbody>
         </table>
+    </div>
     </div>
 </main>
 <footer th:replace="~{fragments/layout :: footer}"></footer>

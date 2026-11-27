@@ -4,9 +4,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -19,7 +21,7 @@ import java.util.Optional;
 @Service
 public class GeminiService {
 
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient = createClient();
 
     @Value("${gemini.api-key}")
     private String apiKey;
@@ -29,6 +31,14 @@ public class GeminiService {
 
     @Value("${gemini.url}")
     private String baseUrl;
+
+    /** Đặt thời gian chờ để trang không treo khi Gemini phản hồi chậm. */
+    private static RestClient createClient() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(5));
+        factory.setReadTimeout(Duration.ofSeconds(60));
+        return RestClient.builder().requestFactory(factory).build();
+    }
 
     public boolean isConfigured() {
         return apiKey != null && !apiKey.isBlank() && !apiKey.startsWith("YOUR_");
@@ -46,7 +56,7 @@ public class GeminiService {
         // Cấu trúc body theo đúng định dạng Gemini yêu cầu
         Map<String, Object> body = Map.of(
                 "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
-                "generationConfig", Map.of("temperature", 0.7, "maxOutputTokens", 2048)
+                "generationConfig", Map.of("temperature", 0.7, "maxOutputTokens", 8192)
         );
 
         try {
@@ -58,10 +68,14 @@ public class GeminiService {
                     .retrieve()
                     .body(JsonNode.class);
 
-            // Câu trả lời nằm ở: candidates[0].content.parts[0].text
-            String text = response.path("candidates").path(0)
-                    .path("content").path("parts").path(0)
-                    .path("text").asText("");
+            // Câu trả lời nằm ở candidates[0].content.parts[*].text (bỏ phần "suy nghĩ" của model)
+            StringBuilder answer = new StringBuilder();
+            for (JsonNode part : response.path("candidates").path(0).path("content").path("parts")) {
+                if (!part.path("thought").asBoolean(false)) {
+                    answer.append(part.path("text").asText(""));
+                }
+            }
+            String text = answer.toString();
             return text.isBlank() ? Optional.empty() : Optional.of(text);
         } catch (Exception e) {
             log.error("Gọi Gemini thất bại: {}", e.getMessage());

@@ -1,5 +1,8 @@
 package com.quachduchuy.controller;
 
+import com.quachduchuy.dto.SearchForm;
+import com.quachduchuy.exception.BusinessException;
+import jakarta.validation.Valid;
 import com.quachduchuy.entity.Booking;
 import com.quachduchuy.entity.Homestay;
 import com.quachduchuy.entity.Room;
@@ -10,11 +13,14 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.validation.BindingResult;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /** Các trang công khai: trang chủ, tìm kiếm, chi tiết homestay. */
 @Controller
@@ -26,15 +32,29 @@ public class HomeController {
 
     @GetMapping("/")
     public String home(Model model) {
-        model.addAttribute("homestays", homestayService.search(null));
+        List<Homestay> homestays = homestayService.findLatest();
+        model.addAttribute("homestays", homestays);
+        // Mỗi điểm đến lấy các homestay của thành phố đó (ảnh đại diện + số lượng)
+        model.addAttribute("destinations", homestays.stream()
+                .collect(Collectors.groupingBy(Homestay::getCity, LinkedHashMap::new, Collectors.toList())));
         model.addAttribute("cities", homestayService.findAllCities());
         return "index";
     }
 
     @GetMapping("/homestays")
-    public String search(@RequestParam(required = false) String keyword, Model model) {
-        model.addAttribute("homestays", homestayService.search(keyword));
-        model.addAttribute("keyword", keyword);
+    public String search(@Valid @ModelAttribute("search") SearchForm search, BindingResult result, Model model) {
+        List<Homestay> homestays = List.of();
+        if (result.hasErrors()) {
+            model.addAttribute("searchError", "Bộ lọc không hợp lệ, vui lòng kiểm tra ngày, số khách và giá");
+        } else {
+            try {
+                homestays = homestayService.search(search);
+            } catch (BusinessException e) {
+                model.addAttribute("searchError", e.getMessage());
+            }
+        }
+        model.addAttribute("homestays", homestays);
+        model.addAttribute("cities", homestayService.findAllCities());
         return "homestay/list";
     }
 

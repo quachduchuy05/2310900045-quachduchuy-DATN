@@ -3,67 +3,128 @@
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head th:replace="~{fragments/layout :: head(${homestay.name})}"></head>
 <body>
-<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<header th:replace="~{fragments/layout :: navbar}"></header>
 <main class="container">
     <div th:replace="~{fragments/layout :: flash}"></div>
+    <a class="back-link" th:href="@{/homestays}"><svg class="ic"><use href="#i-back"/></svg>Tất cả homestay</a>
 
-    <img class="detail-img"
-         th:src="${#strings.isEmpty(homestay.imageUrl)} ? @{/images/placeholder.svg} : ${homestay.imageUrl}"
-         th:alt="${homestay.name}">
     <h1 th:text="${homestay.name}">Tên homestay</h1>
-    <p class="muted">📍 <span th:text="${homestay.address}">Địa chỉ</span> · <span th:text="${homestay.city}">Thành phố</span></p>
-    <p th:text="${homestay.description}">Mô tả</p>
-    <div class="tags" th:if="${!#strings.isEmpty(homestay.amenities)}">
-        <span th:each="a : ${#strings.listSplit(homestay.amenities, ',')}" th:text="${#strings.trim(a)}">Wifi</span>
+    <div class="meta">
+        <span><svg class="ic"><use href="#i-pin"/></svg><span th:text="${#strings.containsIgnoreCase(homestay.address, homestay.city)} ? ${homestay.address} : ${homestay.address + ' · ' + homestay.city}">Địa chỉ</span></span>
+        <a href="#reviews" th:if="${!#lists.isEmpty(homestay.reviews)}">
+            <svg class="ic ic-star"><use href="#i-star"/></svg>
+            <b th:text="${#numbers.formatDecimal(homestay.averageRating, 1, 1, 'COMMA')}">5.0</b>
+            <span th:text="'(' + ${#lists.size(homestay.reviews)} + ' đánh giá)'"></span>
+        </a>
     </div>
 
-    <h2>Các phòng</h2>
-    <p class="muted" th:if="${#lists.isEmpty(rooms)}">Homestay chưa có phòng nào.</p>
+    <!-- Ảnh homestay kèm tối đa 2 ảnh phòng -->
+    <div class="gallery">
+        <img th:src="${#strings.isEmpty(homestay.imageUrl)} ? @{/images/placeholder.svg} : ${homestay.imageUrl}" th:alt="${homestay.name}">
+        <th:block th:each="room, s : ${rooms}">
+            <img th:if="${s.index < 2 and !#strings.isEmpty(room.imageUrl)}" th:src="${room.imageUrl}" th:alt="${room.name}">
+        </th:block>
+    </div>
 
-    <div class="card room" th:each="room : ${rooms}">
-        <img th:src="${#strings.isEmpty(room.imageUrl)} ? @{/images/placeholder.svg} : ${room.imageUrl}" th:alt="${room.name}">
+    <div class="detail-layout">
         <div>
-            <h3 th:text="${room.name}" style="margin-top:0">Tên phòng</h3>
-            <p class="muted" th:text="${room.description}">Mô tả phòng</p>
-            <p>
-                <span class="price"><span th:text="${#numbers.formatDecimal(room.pricePerNight, 0, 'POINT', 0, 'COMMA')}">0</span>đ / đêm</span>
-                · tối đa <b th:text="${room.capacity}">2</b> khách
-            </p>
-
-            <div th:with="ranges=${bookedRanges.get(room.id)}" th:if="${ranges != null and !#lists.isEmpty(ranges)}">
-                <div class="muted" style="font-size:.85rem">Đã kín các ngày:</div>
-                <ul class="booked">
-                    <li th:each="b : ${ranges}">
-                        <span th:text="${#temporals.format(b.checkIn, 'dd/MM/yyyy')}"></span> →
-                        <span th:text="${#temporals.format(b.checkOut, 'dd/MM/yyyy')}"></span>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="alert alert-info" th:unless="${room.available}">Phòng tạm ngưng nhận khách.</div>
-
-            <form th:if="${room.available}" th:action="@{/bookings}" method="post" sec:authorize="isAuthenticated()">
-                <input type="hidden" name="roomId" th:value="${room.id}">
-                <div class="row">
-                    <label>Nhận phòng
-                        <input type="date" name="checkIn" th:min="${today}" required>
-                    </label>
-                    <label>Trả phòng
-                        <input type="date" name="checkOut" th:min="${today}" required>
-                    </label>
-                    <label>Số khách
-                        <input type="number" name="guests" value="1" min="1" th:max="${room.capacity}" required>
-                    </label>
+            <section style="padding-bottom:28px">
+                <h2>Giới thiệu</h2>
+                <p th:text="${homestay.description}">Mô tả</p>
+                <div class="tags" th:if="${!#strings.isEmpty(homestay.amenities)}">
+                    <span th:each="a : ${#strings.listSplit(homestay.amenities, ',')}">
+                        <svg class="ic"><use href="#i-check"/></svg><span th:text="${#strings.trim(a)}">Wifi</span>
+                    </span>
                 </div>
-                <label>Ghi chú
-                    <input type="text" name="note" maxlength="300" placeholder="Yêu cầu thêm (không bắt buộc)">
-                </label>
-                <button type="submit" class="btn">Đặt phòng</button>
-            </form>
-            <p th:if="${room.available}" sec:authorize="isAnonymous()">
-                <a class="btn" th:href="@{/login}">Đăng nhập để đặt phòng</a>
-            </p>
+            </section>
+
+            <section class="block" id="rooms" style="scroll-margin-top:90px">
+                <h2>Chọn phòng và đặt</h2>
+                <p class="muted" th:if="${#lists.isEmpty(rooms)}">Homestay chưa có phòng nào.</p>
+
+                <article class="card room" th:each="room : ${rooms}">
+                    <img th:src="${#strings.isEmpty(room.imageUrl)} ? @{/images/placeholder.svg} : ${room.imageUrl}" th:alt="${room.name}" loading="lazy">
+                    <div>
+                        <h3 th:text="${room.name}">Tên phòng</h3>
+                        <div class="room-meta">
+                            <span class="price">
+                                <b th:text="${#numbers.formatDecimal(room.pricePerNight, 0, 'POINT', 0, 'COMMA')} + 'đ'">0đ</b>
+                                <small>/ đêm</small>
+                            </span>
+                            <span class="who"><svg class="ic"><use href="#i-users"/></svg><span th:text="'Tối đa ' + ${room.capacity} + ' khách'">2 khách</span></span>
+                        </div>
+                        <p class="muted small" th:text="${room.description}">Mô tả phòng</p>
+
+                        <div class="booked" th:with="ranges=${bookedRanges.get(room.id)}" th:if="${ranges != null and !#lists.isEmpty(ranges)}">
+                            Đã kín:
+                            <span class="range" th:each="b : ${ranges}"
+                                  th:text="${#temporals.format(b.checkIn, 'dd/MM')} + ' → ' + ${#temporals.format(b.checkOut, 'dd/MM/yyyy')}"></span>
+                        </div>
+
+                        <div class="alert alert-info" th:unless="${room.available}">Phòng tạm ngưng nhận khách.</div>
+
+                        <div class="room-form" th:if="${room.available}">
+                            <form th:action="@{/bookings/confirm}" method="get" sec:authorize="isAuthenticated()">
+                                <input type="hidden" name="roomId" th:value="${room.id}">
+                                <div class="row">
+                                    <label>Nhận phòng
+                                        <input type="date" name="checkIn" th:min="${today}" required>
+                                    </label>
+                                    <label>Trả phòng
+                                        <input type="date" name="checkOut" th:min="${today}" required>
+                                    </label>
+                                    <label>Số khách
+                                        <input type="number" name="guests" value="1" min="1" th:max="${room.capacity}" required>
+                                    </label>
+                                </div>
+                                <label>Ghi chú
+                                    <input type="text" name="note" maxlength="300" placeholder="Yêu cầu thêm (không bắt buộc)">
+                                </label>
+                                <button type="submit" class="btn btn-book btn-block">Đặt ngay <svg class="ic"><use href="#i-arrow"/></svg></button>
+                            </form>
+                            <a class="btn btn-book btn-block" sec:authorize="isAnonymous()" th:href="@{/login}">Đăng nhập để đặt phòng</a>
+                        </div>
+                    </div>
+                </article>
+            </section>
+
+            <section class="block" id="reviews" style="scroll-margin-top:90px">
+                <h2>Đánh giá của khách</h2>
+                <p class="muted" th:if="${#lists.isEmpty(homestay.reviews)}">Chưa có đánh giá nào.</p>
+                <article class="card review" th:each="r : ${homestay.reviews}">
+                    <span class="avatar" th:text="${#strings.toUpperCase(#strings.substring(r.user.fullName, 0, 1))}">K</span>
+                    <div>
+                        <b th:text="${r.user.fullName}">Khách</b>
+                        <div>
+                            <span class="stars" th:text="${#strings.repeat('★', r.rating) + #strings.repeat('☆', 5 - r.rating)}">★★★★★</span>
+                            <span class="muted small" th:text="${#temporals.format(r.createdAt, 'dd/MM/yyyy')}"></span>
+                        </div>
+                        <p th:if="${!#strings.isEmpty(r.comment)}" th:text="${r.comment}"></p>
+                        <form th:action="@{/admin/reviews/{id}/delete(id=${r.id})}" method="post" sec:authorize="hasRole('ADMIN')"
+                              onsubmit="return confirm('Xóa đánh giá này?')" style="margin-top:10px">
+                            <button type="submit" class="btn btn-sm btn-danger">Xóa</button>
+                        </form>
+                    </div>
+                </article>
+            </section>
         </div>
+
+        <aside class="card aside">
+            <div class="price" th:if="${homestay.minPrice != null}">
+                <small>Giá chỉ từ</small><br>
+                <b th:text="${#numbers.formatDecimal(homestay.minPrice, 0, 'POINT', 0, 'COMMA')} + 'đ'">0đ</b>
+                <small>/ đêm</small>
+            </div>
+            <p class="muted" th:if="${homestay.minPrice == null}">Chưa có phòng để đặt.</p>
+            <a class="btn btn-book btn-lg btn-block" th:if="${!#lists.isEmpty(rooms)}" href="#rooms" style="margin-top:14px">Đặt phòng ngay</a>
+            <ul class="perks">
+                <li><svg class="ic"><use href="#i-check"/></svg>Xem tổng tiền trước khi xác nhận</li>
+                <li><svg class="ic"><use href="#i-check"/></svg>Phòng được giữ trong lúc bạn thanh toán</li>
+                <li><svg class="ic"><use href="#i-check"/></svg>Thanh toán trực tuyến qua VNPay</li>
+                <li><svg class="ic"><use href="#i-check"/></svg>Đánh giá sau chuyến đi</li>
+            </ul>
+            <a class="btn btn-outline btn-block" th:href="@{/ai}" style="margin-top:18px"><svg class="ic"><use href="#i-spark"/></svg>Lên lịch trình bằng AI</a>
+        </aside>
     </div>
 </main>
 <footer th:replace="~{fragments/layout :: footer}"></footer>

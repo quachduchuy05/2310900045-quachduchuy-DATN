@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Xác nhận đặt phòng')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: navbar}"></header>
+<main class="container">
+    <a class="back-link" th:href="@{/homestays/{id}(id=${quote.room.homestay.id})}"><svg class="ic"><use href="#i-back"/></svg>Chọn lại</a>
+    <div class="steps"><span class="on">1. Chọn phòng</span><span class="on">2. Xác nhận</span><span>3. Thanh toán</span></div>
+    <h1>Xác nhận đặt phòng</h1>
+
+    <div class="checkout">
+        <section class="card">
+            <div class="dates">
+                <div><small>Nhận phòng</small><b th:text="${#temporals.format(form.checkIn, 'dd/MM/yyyy')}"></b></div>
+                <div><small>Trả phòng</small><b th:text="${#temporals.format(form.checkOut, 'dd/MM/yyyy')}"></b></div>
+            </div>
+            <dl class="lines">
+                <div><dt>Số khách</dt><dd th:text="${form.guests}"></dd></div>
+                <div th:if="${!#strings.isEmpty(form.note)}"><dt>Ghi chú</dt><dd th:text="${form.note}"></dd></div>
+                <div><dt>Đơn giá × số đêm</dt>
+                    <dd th:text="${#numbers.formatDecimal(quote.room.pricePerNight, 0, 'POINT', 0, 'COMMA')} + 'đ × ' + ${quote.nights} + ' đêm'"></dd></div>
+                <div class="grand"><dt>Tổng tiền</dt>
+                    <dd class="price total" th:text="${#numbers.formatDecimal(quote.total, 0, 'POINT', 0, 'COMMA')} + 'đ'">0đ</dd></div>
+            </dl>
+
+            <div class="alert alert-info">
+                Sau khi xác nhận, phòng được giữ cho bạn trong <b th:text="${holdMinutes}">15</b> phút để thanh toán.
+            </div>
+
+            <form th:action="@{/bookings}" method="post">
+                <input type="hidden" name="roomId" th:value="${form.roomId}">
+                <input type="hidden" name="checkIn" th:value="${form.checkIn}">
+                <input type="hidden" name="checkOut" th:value="${form.checkOut}">
+                <input type="hidden" name="guests" th:value="${form.guests}">
+                <input type="hidden" name="note" th:value="${form.note}">
+                <button type="submit" class="btn btn-book btn-lg btn-block">Xác nhận đặt phòng <svg class="ic"><use href="#i-arrow"/></svg></button>
+            </form>
+        </section>
+
+        <aside class="card">
+            <img class="summary-img" th:src="${#strings.isEmpty(quote.room.imageUrl)} ? @{/images/placeholder.svg} : ${quote.room.imageUrl}" th:alt="${quote.room.name}">
+            <h3 th:text="${quote.room.homestay.name}">Homestay</h3>
+            <p th:text="${quote.room.name}">Phòng</p>
+            <p class="muted small"><svg class="ic"><use href="#i-pin"/></svg> <span th:text="${quote.room.homestay.address}">Địa chỉ</span></p>
+        </aside>
+    </div>
+</main>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

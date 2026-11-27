@@ -37,5 +37,10 @@ public class User {
 
     private boolean enabled = true; // Admin có thể khóa tài khoản
 
+    @Column(unique = true, length = 64)
+    private String googleId; // mã định danh Google ("sub"), null nếu chưa liên kết
+
+    private Boolean googleOnly; // true: tài khoản tạo từ Google, không dùng mật khẩu
+
     private LocalDateTime createdAt = LocalDateTime.now();
 }

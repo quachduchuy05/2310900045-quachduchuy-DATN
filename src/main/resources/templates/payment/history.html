@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Lịch sử thanh toán')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: navbar}"></header>
+<main>
+    <section class="page-head">
+        <div class="wrap">
+            <div>
+                <span class="eyebrow">Giao dịch</span>
+                <h1 th:text="${title}">Lịch sử thanh toán</h1>
+            </div>
+        </div>
+    </section>
+    <div class="container">
+    <div class="stats">
+        <div class="stat">
+            <span class="ico-box"><svg class="ic"><use href="#i-list"/></svg></span>
+            <div><div class="muted">Số giao dịch</div><div class="num" th:text="${totalCount}">0</div></div>
+        </div>
+        <div class="stat">
+            <span class="ico-box"><svg class="ic"><use href="#i-check"/></svg></span>
+            <div><div class="muted">Giao dịch thành công</div><div class="num" th:text="${successCount}">0</div></div>
+        </div>
+        <div class="stat">
+            <span class="ico-box coral"><svg class="ic"><use href="#i-wallet"/></svg></span>
+            <div><div class="muted">Tổng tiền thành công</div><div class="num" th:text="${#numbers.formatDecimal(successAmount, 0, 'POINT', 0, 'COMMA')} + 'đ'">0đ</div></div>
+        </div>
+    </div>
+
+    <form th:action="@{${path}}" method="get" class="filter-bar">
+        <select name="status" onchange="this.form.submit()">
+            <option value="">Tất cả trạng thái</option>
+            <option value="SUCCESS" th:selected="${status != null and status.name() == 'SUCCESS'}">Thành công</option>
+            <option value="FAILED" th:selected="${status != null and status.name() == 'FAILED'}">Thất bại</option>
+            <option value="PENDING" th:selected="${status != null and status.name() == 'PENDING'}">Chưa hoàn tất</option>
+        </select>
+        <noscript><button type="submit" class="btn btn-sm">Lọc</button></noscript>
+    </form>
+
+    <p class="muted" th:if="${#lists.isEmpty(payments)}">Chưa có giao dịch nào.</p>
+    <div class="table-wrap" th:unless="${#lists.isEmpty(payments)}">
+        <table>
+            <thead>
+            <tr>
+                <th>Mã giao dịch</th><th>Thời gian</th><th>Đơn / Phòng</th>
+                <th th:if="${!mine}">Khách</th><th>Số tiền</th><th>Ngân hàng</th><th>Trạng thái</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="p : ${payments}">
+                <td>
+                    <span th:text="${p.txnRef}">1_123</span>
+                    <div class="muted small" th:if="${!#strings.isEmpty(p.vnpTransactionNo)}" th:text="'VNPay: ' + ${p.vnpTransactionNo}"></div>
+                </td>
+                <td th:text="${#temporals.format(p.paidAt != null ? p.paidAt : p.createdAt, 'dd/MM/yyyy HH:mm')}"></td>
+                <td>
+                    <a th:if="${mine}" th:href="@{/bookings/{id}(id=${p.booking.id})}" th:text="'Đơn #' + ${p.booking.id}"></a>
+                    <b th:unless="${mine}" th:text="'Đơn #' + ${p.booking.id}"></b>
+                    <div class="muted small" th:text="${p.booking.room.homestay.name} + ' - ' + ${p.booking.room.name}"></div>
+                </td>
+                <td th:if="${!mine}" th:text="${p.booking.user.fullName}">Khách</td>
+                <td class="price"><span th:text="${#numbers.formatDecimal(p.amount, 0, 'POINT', 0, 'COMMA')}">0</span>đ</td>
+                <td th:text="${p.bankCode} ?: '—'"></td>
+                <td>
+                    <span th:replace="~{fragments/layout :: paymentStatus(${p.status})}"></span>
+                    <div class="field-error"
+                         th:if="${p.status.name() == 'SUCCESS' and p.booking.note != null and #strings.contains(p.booking.note, 'CẦN HOÀN TIỀN')}">
+                        Đơn có khoản cần hoàn tiền
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    </div>
+</main>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

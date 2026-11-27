@@ -2,14 +2,43 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Quản lý nhà')}"></head>
 <body>
-<nav th:replace="~{fragments/layout :: navbar}"></nav>
-<main class="container">
+<header th:replace="~{fragments/layout :: navbar}"></header>
+<main>
+    <section class="page-head">
+        <div class="wrap">
+            <div>
+                <span class="eyebrow">Khu vực chủ nhà</span>
+                <h1>Quản lý nhà</h1>
+            </div>
+            <div class="actions">
+                <a class="btn btn-outline" th:href="@{/host/payments}">Lịch sử giao dịch</a>
+                <a class="btn btn-book" th:href="@{/host/homestays/new}">+ Thêm homestay</a>
+            </div>
+        </div>
+    </section>
+    <div class="container">
     <div th:replace="~{fragments/layout :: flash}"></div>
 
-    <div style="display:flex;justify-content:space-between;align-items:center">
-        <h2>Homestay của tôi</h2>
-        <a class="btn" th:href="@{/host/homestays/new}">+ Thêm homestay</a>
+    <div class="stats">
+        <div class="stat">
+            <span class="ico-box"><svg class="ic"><use href="#i-home"/></svg></span>
+            <div><div class="muted">Homestay</div><div class="num" th:text="${#lists.size(homestays)}">0</div></div>
+        </div>
+        <div class="stat">
+            <span class="ico-box amber"><svg class="ic"><use href="#i-clock"/></svg></span>
+            <div><div class="muted">Đơn chờ thanh toán</div><div class="num" th:text="${pendingCount}">0</div></div>
+        </div>
+        <div class="stat">
+            <span class="ico-box"><svg class="ic"><use href="#i-check"/></svg></span>
+            <div><div class="muted">Đơn đã thanh toán</div><div class="num" th:text="${paidCount}">0</div></div>
+        </div>
+        <div class="stat">
+            <span class="ico-box coral"><svg class="ic"><use href="#i-wallet"/></svg></span>
+            <div><div class="muted">Doanh thu</div><div class="num" th:text="${#numbers.formatDecimal(revenue, 0, 'POINT', 0, 'COMMA')} + 'đ'">0đ</div></div>
+        </div>
     </div>
+
+    <h2>Homestay của tôi</h2>
 
     <p class="muted" th:if="${#lists.isEmpty(homestays)}">Bạn chưa có homestay nào.</p>
     <div class="table-wrap" th:unless="${#lists.isEmpty(homestays)}">
@@ -57,7 +86,7 @@
                     <div class="muted" style="font-size:.8rem" th:if="${!#strings.isEmpty(b.note)}" th:text="${b.note}"></div>
                 </td>
                 <td>
-                    <form th:if="${b.status.name() == 'PAID'}" th:action="@{/host/bookings/{id}/status(id=${b.id})}" method="post">
+                    <form th:if="${b.status.name() == 'PAID' and !b.checkIn.isAfter(today)}" th:action="@{/host/bookings/{id}/status(id=${b.id})}" method="post">
                         <input type="hidden" name="status" value="COMPLETED">
                         <button type="submit" class="btn btn-sm btn-ok">Khách đã ở xong</button>
                     </form>
@@ -71,6 +100,7 @@
             </tr>
             </tbody>
         </table>
+    </div>
     </div>
 </main>
 <footer th:replace="~{fragments/layout :: footer}"></footer>

@@ -1,5 +1,6 @@
 package com.quachduchuy.controller;
 
+import com.quachduchuy.service.ReviewService;
 import com.quachduchuy.entity.BookingStatus;
 import com.quachduchuy.entity.Role;
 import com.quachduchuy.service.BookingService;
@@ -22,6 +23,7 @@ public class AdminController {
     private final UserService userService;
     private final HomestayService homestayService;
     private final BookingService bookingService;
+    private final ReviewService reviewService;
 
     @GetMapping
     public String dashboard(Model model) {
@@ -34,6 +36,7 @@ public class AdminController {
         model.addAttribute("homestays", homestayService.findAll());
         model.addAttribute("bookings", bookingService.findAll());
         model.addAttribute("roles", Role.values());
+        model.addAttribute("statuses", BookingStatus.values());
         return "admin/dashboard";
     }
 
@@ -45,8 +48,9 @@ public class AdminController {
     }
 
     @PostMapping("/users/{id}/role")
-    public String changeRole(@PathVariable Long id, @RequestParam Role role, RedirectAttributes redirect) {
-        userService.changeRole(id, role);
+    public String changeRole(@PathVariable Long id, @RequestParam Role role,
+                             Principal principal, RedirectAttributes redirect) {
+        userService.changeRole(userService.getCurrentUser(principal), id, role);
         redirect.addFlashAttribute("success", "Đã đổi vai trò tài khoản #" + id);
         return "redirect:/admin#users";
     }
@@ -56,6 +60,13 @@ public class AdminController {
         homestayService.toggleActive(id);
         redirect.addFlashAttribute("success", "Đã đổi trạng thái homestay #" + id);
         return "redirect:/admin#homestays";
+    }
+
+    @PostMapping("/reviews/{id}/delete")
+    public String deleteReview(@PathVariable Long id, RedirectAttributes redirect) {
+        Long homestayId = reviewService.delete(id);
+        redirect.addFlashAttribute("success", "Đã xóa đánh giá");
+        return "redirect:/homestays/" + homestayId;
     }
 
     @PostMapping("/bookings/{id}/status")

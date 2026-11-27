@@ -42,6 +42,12 @@
             <artifactId>thymeleaf-extras-springsecurity6</artifactId>
         </dependency>
 
+        <!-- Đăng nhập bằng Google (OAuth2 / OpenID Connect) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-client</artifactId>
+        </dependency>
+
         <!-- Làm việc với CSDL -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

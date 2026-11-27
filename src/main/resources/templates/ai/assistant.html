@@ -2,14 +2,25 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Trợ lý AI')}"></head>
 <body>
-<nav th:replace="~{fragments/layout :: navbar}"></nav>
-<main class="container">
-    <h2>✨ Trợ lý du lịch AI</h2>
+<header th:replace="~{fragments/layout :: navbar}"></header>
+<main>
+    <section class="page-head">
+        <div class="wrap">
+            <div>
+                <span class="eyebrow"><svg class="ic"><use href="#i-spark"/></svg>Trợ lý du lịch AI</span>
+                <h1>Lên lịch trình trong một phút</h1>
+                <p>Cho biết điểm đến, ngân sách và sở thích, phần còn lại để trợ lý lo.</p>
+            </div>
+        </div>
+    </section>
+    <div class="container">
     <div class="alert alert-info" th:unless="${aiReady}">
         Chưa cấu hình <code>gemini.api-key</code> nên hệ thống sẽ dùng lịch trình mẫu thay cho Gemini.
     </div>
 
-    <div class="card">
+    <div class="ai-layout">
+    <div class="card ai-form">
+        <h3>Chuyến đi của bạn</h3>
         <form th:action="@{/ai/plan}" th:object="${form}" method="post">
             <div class="row">
                 <label>Điểm đến
@@ -32,12 +43,19 @@
             </div>
             <label>Sở thích
                 <input type="text" th:field="*{interests}" placeholder="ẩm thực, chụp ảnh, thiên nhiên...">
+                <span class="field-error" th:if="${#fields.hasErrors('interests')}" th:errors="*{interests}"></span>
             </label>
-            <button type="submit" class="btn">Lập lịch trình</button>
+            <button type="submit" class="btn btn-book btn-lg btn-block"><svg class="ic"><use href="#i-spark"/></svg>Lập lịch trình</button>
         </form>
     </div>
 
-    <div class="card" th:if="${suggestion != null}">
+    <div>
+    <div class="empty" th:if="${suggestion == null}">
+        <span class="ico-box amber"><svg class="ic"><use href="#i-spark"/></svg></span>
+        <h3>Lịch trình sẽ hiện ở đây</h3>
+        <p class="muted">Điền thông tin chuyến đi rồi bấm "Lập lịch trình".</p>
+    </div>
+    <div class="card" th:style="${suggestion == null} ? 'display:none'" th:if="${suggestion != null}">
         <h3 style="margin-top:0">Kết quả
             <span class="badge badge-paid" th:if="${suggestion.fromAi()}">Gemini AI</span>
             <span class="badge" th:unless="${suggestion.fromAi()}">Lịch trình mẫu</span>
@@ -76,6 +94,9 @@
             <pre class="md-src" hidden th:text="${p.content}"></pre>
             <div class="md-out"></div>
         </details>
+    </div>
+    </div>
+    </div>
     </div>
 </main>
 <footer th:replace="~{fragments/layout :: footer}"></footer>
